@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+
+# Rust / Soroban build
+target/
+**/target/
+
+# Env / secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# Build output
+dist/
+build/
+.vercel/
+.next/
+
+# Test / QA artifacts
+playwright-report/
+test-results/
+qa-artifacts/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+*.log
