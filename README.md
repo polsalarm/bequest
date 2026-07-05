@@ -48,6 +48,19 @@ Make inheritance a property of the asset itself. A Soroban proof-of-life vault e
 - **RWA Asset Card** *(roadmap stub)* — mock on-chain real-world asset display
 - **Sentinel Monitor** *(roadmap stub)* — 24/7 anomaly-detection status light
 
+## 🔄 How it works (Freighter flow)
+
+Every user is the **owner of their own vault**. The factory is a shared "vault printer" — each `create_vault` deploys a fresh, isolated vault contract for that wallet.
+
+1. **Connect** — open the app, approve Freighter. The app knows your address (`GABC…YOU`) — your existing wallet, no new account.
+2. **Create your vault** — click *Create Vault* → sign in Freighter → the factory deploys a brand-new vault **just for you** (`CXYZ…MINE`). One vault per wallet.
+3. **Add heirs** — paste another Stellar address (e.g. a second Freighter wallet, your child's), set their share in basis points (splits allowed). Sign as owner. Heirs don't need to do anything yet.
+4. **Fund** — `deposit` USDC/XLM into your vault.
+5. **Stay alive** — tap *I'm Alive* (`check_in`) before the timeout to reset the countdown.
+6. **Inheritance fires** — if you go silent past the timeout, an heir connects their wallet and clicks *Claim* → their share lands in their wallet. No company, no court.
+
+> Heir = any Stellar address. The CLI tests sign from the terminal; Freighter just moves the signing into a browser popup — same transactions.
+
 ## 🛠️ Tech Stack
 - **Frontend:** React 19 + Vite + TypeScript + Tailwind CSS
 - **Blockchain:** Stellar (Soroban smart contracts in Rust `soroban-sdk`, Stellar RPC, SEP-30) — **factory + vault** contracts
