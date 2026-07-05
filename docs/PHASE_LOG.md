@@ -10,13 +10,14 @@ Living record of what changed each phase: contract IDs, deploy links, keys (publ
 
 | Item | Value |
 |------|-------|
-| Current phase | ✅ Phases 0–3 done → ▶ Phase 4 next (factory + deploy) |
+| Current phase | ✅ Phases 0–4 done → ▶ Phase 5 next (frontend foundation) |
 | Network | Stellar Testnet (`Test SDF Network ; September 2015`) |
 | Deployer identity | `pamana-testnet` → `GDVWTEQQHWWPB7BHGVZDNZQGNWNB4EDLOKTHHNW2AXLI7JBC6SRJM4X3` |
-| Factory contract ID | TBD (Phase 4) |
-| Vault contract ID(s) | TBD (Phase 4) |
+| Factory contract ID | `CAMKUFDTTIVDL4Z2UV6UISUDGSONOCCEZHTYH3EFTIA2ILSLLKV4F5RH` |
+| Vault contract ID (first) | `CADCW4D7PHXCWJ4VDEGPMMB37T4UXPKAMOB5XUZM4KGI7JW6QO4AAQQ4` |
 | Vault wasm hash | `32c5a1599ac5b0eb7e1b014ebe3e28b51f7704891af2a6fb94f5ea0393078f0f` |
-| USDC SAC (testnet) | TBD (Phase 4) |
+| Factory wasm hash | `4b500598db3ab6ba1ee80dbeadfd8a845ddf83ad7e271ca4c14971ddbc565607` |
+| Token (native XLM SAC, testnet) | `CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC` |
 | Live app URL | TBD |
 | soroban-sdk | 22.x · target `wasm32v1-none` · stellar-cli 25.2.0 |
 
@@ -155,20 +156,42 @@ Living record of what changed each phase: contract IDs, deploy links, keys (publ
 
 ---
 
-## Phase 4 — Factory + Testnet deploy ⬜
-**Date:** — · **Status:** Not started
+## Phase 4 — Factory + Testnet deploy ✅
+**Date:** 2026-07-06 · **Status:** Complete
 
-### Deploys / IDs (fill on deploy)
+### Changes
+- `pamana-factory` implemented: deploys a fresh `PamanaVault` per family via `env.deployer()` with a **deterministic per-owner salt** (sha256 of owner xdr), initializes it through a cross-contract `invoke_contract` call, records an owner→vault registry. `init` / `create_vault` / `get_vault` / `get_admin` / `get_wasm_hash`.
+- One vault per owner (`VaultExists` guard). Vault `types` module made `pub` for client bindings.
+- Solved the cdylib `init`-symbol clash by invoking the vault by symbol instead of depending on the vault crate.
+- Factory wasm: 3 210 bytes, 6 exported functions.
+
+### Deploys / IDs
 | Contract | Testnet ID | Explorer |
 |----------|-----------|----------|
-| PamanaFactory | TBD | — |
-| PamanaVault | TBD | — |
+| PamanaFactory | `CAMKUFDTTIVDL4Z2UV6UISUDGSONOCCEZHTYH3EFTIA2ILSLLKV4F5RH` | [→](https://stellar.expert/explorer/testnet/contract/CAMKUFDTTIVDL4Z2UV6UISUDGSONOCCEZHTYH3EFTIA2ILSLLKV4F5RH) |
+| PamanaVault (first, via factory) | `CADCW4D7PHXCWJ4VDEGPMMB37T4UXPKAMOB5XUZM4KGI7JW6QO4AAQQ4` | [→](https://stellar.expert/explorer/testnet/contract/CADCW4D7PHXCWJ4VDEGPMMB37T4UXPKAMOB5XUZM4KGI7JW6QO4AAQQ4) |
 
-### Success criteria
-- [ ] Factory deploys a working vault in one call
-- [ ] Two owners → two isolated vaults
-- [ ] CLI end-to-end (create→deposit→check_in→claim) passes on Testnet
-- [ ] Contract IDs recorded here + in `.env.example`
+Token = native XLM SAC `CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC`. Full deploy sequence in [`contract-deployment.md`](contract-deployment.md).
+
+### Tests — unit (6) + live Testnet end-to-end
+| Check | Result |
+|-------|--------|
+| init stores admin + wasm hash | ✅ |
+| double init fails | ✅ |
+| create_vault deploys + initializes a real vault | ✅ |
+| two owners → isolated vaults | ✅ |
+| duplicate vault for owner rejected | ✅ |
+| full inheritance flow through factory-deployed vault (unit) | ✅ |
+| **Testnet:** create_vault → deposit 100 XLM → set_heirs → check_in → status `Alive` | ✅ |
+| **Testnet:** wait 70s → status `TimedOut` → claim → heir 10000→**10100 XLM** → status `Distributing` | ✅ |
+
+**Workspace: `cargo test --workspace` → 26 passed (20 vault + 6 factory).**
+
+### Success criteria — all met ✅
+- [x] Factory deploys a working vault in one call
+- [x] Two owners → two isolated vaults
+- [x] CLI end-to-end (create→deposit→check_in→claim) passes on Testnet
+- [x] Contract IDs recorded (this log + `contract-deployment.md`)
 
 ---
 
@@ -254,3 +277,4 @@ The vault crate is split into two source files purely for organization. They com
 | 2026-07-06 | 1 | Vault core: init/deposit/check_in/set_heirs/claim/withdraw/bump + views |
 | 2026-07-06 | 2 | Multi-heir BPS validation + TotalLocked snapshot; 16/16 tests green |
 | 2026-07-06 | 3 | Trust-fund release schedule (ReleaseSlot, tranches); 20/20 tests green |
+| 2026-07-06 | 4 | Factory deploy per-owner vaults; deployed to Testnet; live claim verified (+100 XLM) |
