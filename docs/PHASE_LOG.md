@@ -10,12 +10,12 @@ Living record of what changed each phase: contract IDs, deploy links, keys (publ
 
 | Item | Value |
 |------|-------|
-| Current phase | ✅ Phases 0–2 done → ▶ Phase 3 next |
+| Current phase | ✅ Phases 0–3 done → ▶ Phase 4 next (factory + deploy) |
 | Network | Stellar Testnet (`Test SDF Network ; September 2015`) |
 | Deployer identity | `pamana-testnet` → `GDVWTEQQHWWPB7BHGVZDNZQGNWNB4EDLOKTHHNW2AXLI7JBC6SRJM4X3` |
 | Factory contract ID | TBD (Phase 4) |
 | Vault contract ID(s) | TBD (Phase 4) |
-| Vault wasm hash | `5ee39315911c345c120c64e3ad51ba32e56ee3e71cad8b90056fecf81693042c` |
+| Vault wasm hash | `32c5a1599ac5b0eb7e1b014ebe3e28b51f7704891af2a6fb94f5ea0393078f0f` |
 | USDC SAC (testnet) | TBD (Phase 4) |
 | Live app URL | TBD |
 | soroban-sdk | 22.x · target `wasm32v1-none` · stellar-cli 25.2.0 |
@@ -126,13 +126,32 @@ Living record of what changed each phase: contract IDs, deploy links, keys (publ
 
 ---
 
-## Phase 3 — Schedule + bump + withdraw ⬜
-**Date:** — · **Status:** Not started
+## Phase 3 — Schedule + bump + withdraw ✅
+**Date:** 2026-07-06 · **Status:** Complete
 
-### Success criteria
-- [ ] Full vault suite green
-- [ ] mature tranche claimable / immature rejected
-- [ ] withdraw blocked after first claim
+> `bump` + `withdraw` already shipped in Phase 1; Phase 3 delivers the trust-fund release schedule.
+
+### Changes
+- `ReleaseSlot { unlock_time, bps, claimed }` type + `DataKey::Schedule(Address)`.
+- `set_schedule(heir_addr, slots)` — owner-only; rejects unknown heir + slot bps sum ≠ 10 000.
+- `claim` is now schedule-aware: a scheduled heir releases **one matured tranche per call** (`NothingMatured` until `unlock_time`); heir marked fully `claimed` only when every slot is drained. Lump-sum heirs unchanged.
+- `get_schedule` view. Vault wasm now 13 562 bytes, **15 exported functions**.
+
+### Tests
+| Test | Result |
+|------|--------|
+| set_schedule rejects unknown heir | ✅ |
+| set_schedule rejects bad bps sum | ✅ |
+| scheduled heir releases in tranches (300 → 600), premature = NothingMatured | ✅ |
+| drained schedule → AlreadyClaimed; lump-sum heir unaffected (400) | ✅ |
+| schedule stored + readable | ✅ |
+
+**Full suite: `cargo test -p pamana-vault` → 20 passed, 0 failed.**
+
+### Success criteria — all met ✅
+- [x] Full vault suite green
+- [x] mature tranche claimable / immature rejected (`NothingMatured`)
+- [x] withdraw blocked after first claim (Phase 2)
 
 ---
 
@@ -214,3 +233,4 @@ Living record of what changed each phase: contract IDs, deploy links, keys (publ
 | 2026-07-06 | 0 | Workspace + frontend scaffold, funded testnet identity, toolchain pinned |
 | 2026-07-06 | 1 | Vault core: init/deposit/check_in/set_heirs/claim/withdraw/bump + views |
 | 2026-07-06 | 2 | Multi-heir BPS validation + TotalLocked snapshot; 16/16 tests green |
+| 2026-07-06 | 3 | Trust-fund release schedule (ReleaseSlot, tranches); 20/20 tests green |
