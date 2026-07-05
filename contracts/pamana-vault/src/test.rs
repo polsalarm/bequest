@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use crate::types::{Error, Heir, VaultStatus};
+use crate::types::{Error, Heir, ReleaseSlot, VaultStatus};
 use crate::{PamanaVault, PamanaVaultClient};
 use soroban_sdk::testutils::{Address as _, Ledger};
 use soroban_sdk::{token, vec, Address, Env, Vec};
@@ -265,4 +265,99 @@ fn withdraw_blocked_after_distribution_starts() {
     s.vault.claim(&a);
     let res = s.vault.try_withdraw(&100);
     assert_eq!(res, Err(Ok(Error::Distributing)));
+}
+
+// ── Phase 3 — trust-fund release schedule ─────────────────────────────
+
+fn slot(unlock_time: u64, bps: u32) -> ReleaseSlot {
+    ReleaseSlot {
+        unlock_time,
+        bps,
+        claimed: false,
+    }
+}
+
+fn set_time(env: &Env, ts: u64) {
+    env.ledger().with_mut(|l| {
+        l.timestamp = ts;
+    });
+}
+
+#[test]
+fn set_schedule_rejects_unknown_heir() {
+    let s = setup();
+    let a = Address::generate(&s.env);
+    let stranger = Address::generate(&s.env);
+    s.vault.set_heirs(&vec![&s.env, heir(&s.env, &a, 10_000)]);
+    let res = s
+        .vault
+        .try_set_schedule(&stranger, &vec![&s.env, slot(1_000, 10_000)]);
+    assert_eq!(res, Err(Ok(Error::HeirNotFound)));
+}
+
+#[test]
+fn set_schedule_rejects_bad_bps_sum() {
+    let s = setup();
+    let a = Address::generate(&s.env);
+    s.vault.set_heirs(&vec![&s.env, heir(&s.env, &a, 10_000)]);
+    // 5000 + 4000 = 9000, not 10000.
+    let res = s
+        .vault
+        .try_set_schedule(&a, &vec![&s.env, slot(1_000, 5_000), slot(2_000, 4_000)]);
+    assert_eq!(res, Err(Ok(Error::InvalidBps)));
+}
+
+#[test]
+fn scheduled_heir_releases_in_tranches() {
+    let s = setup();
+    let a = Address::generate(&s.env); // 60%, scheduled 50/50
+    let b = Address::generate(&s.env); // 40%, lump sum
+    s.token_admin.mint(&s.owner, &1_000);
+    s.vault.deposit(&1_000);
+    s.vault
+        .set_heirs(&vec![&s.env, heir(&s.env, &a, 6_000), heir(&s.env, &b, 4_000)]);
+    // A's 60% releases in two equal tranches at t=1000 and t=2000.
+    s.vault
+        .set_schedule(&a, &vec![&s.env, slot(1_000, 5_000), slot(2_000, 5_000)]);
+
+    // Past the owner timeout, but before any tranche matures.
+    set_time(&s.env, TIMEOUT + 1);
+    let res = s.vault.try_claim(&a);
+    assert_eq!(res, Err(Ok(Error::NothingMatured)));
+
+    // First tranche matures: A gets 1000 * 60% * 50% = 300.
+    set_time(&s.env, 1_500);
+    s.vault.claim(&a);
+    assert_eq!(s.token.balance(&a), 300);
+
+    // Second tranche not yet matured.
+    let res = s.vault.try_claim(&a);
+    assert_eq!(res, Err(Ok(Error::NothingMatured)));
+
+    // Second tranche matures: another 300 → A has full 600.
+    set_time(&s.env, 2_500);
+    s.vault.claim(&a);
+    assert_eq!(s.token.balance(&a), 600);
+
+    // Schedule fully drained → heir marked claimed, further claims rejected.
+    let res = s.vault.try_claim(&a);
+    assert_eq!(res, Err(Ok(Error::AlreadyClaimed)));
+
+    // Lump-sum heir B is unaffected: full 40% at once, from the same snapshot.
+    s.vault.claim(&b);
+    assert_eq!(s.token.balance(&b), 400);
+    assert_eq!(s.token.balance(&s.vault.address), 0);
+}
+
+#[test]
+fn schedule_stored_and_readable() {
+    let s = setup();
+    let a = Address::generate(&s.env);
+    s.vault.set_heirs(&vec![&s.env, heir(&s.env, &a, 10_000)]);
+    s.vault
+        .set_schedule(&a, &vec![&s.env, slot(1_000, 4_000), slot(2_000, 6_000)]);
+    let sched = s.vault.get_schedule(&a);
+    assert_eq!(sched.len(), 2);
+    assert_eq!(sched.get(0).unwrap().bps, 4_000);
+    assert_eq!(sched.get(1).unwrap().unlock_time, 2_000);
 }

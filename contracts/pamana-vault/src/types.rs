@@ -10,6 +10,18 @@ pub struct Heir {
     pub claimed: bool,
 }
 
+/// One tranche of a trust-fund release schedule for a single heir.
+/// A heir's slots' `bps` sum to 10_000 (= 100% of that heir's allocation).
+#[contracttype]
+#[derive(Clone)]
+pub struct ReleaseSlot {
+    /// Ledger timestamp (seconds) after which this tranche is claimable.
+    pub unlock_time: u64,
+    /// Share of this heir's allocation released at this slot, in basis points.
+    pub bps: u32,
+    pub claimed: bool,
+}
+
 /// High-level vault state, legible to a non-crypto UI.
 #[contracttype]
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -31,6 +43,8 @@ pub enum DataKey {
     Heirs,
     TotalLocked,
     Distributing,
+    /// Per-heir trust-fund release schedule: `Vec<ReleaseSlot>`.
+    Schedule(Address),
 }
 
 #[contracterror]
@@ -51,4 +65,6 @@ pub enum Error {
     Distributing = 8,
     /// No heirs designated yet.
     NoHeirs = 9,
+    /// A schedule was set but no tranche has matured yet.
+    NothingMatured = 10,
 }

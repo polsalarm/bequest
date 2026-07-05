@@ -12,7 +12,7 @@ mod types;
 mod test;
 
 use soroban_sdk::{contract, contractimpl, token, Address, Env, Vec};
-use types::{DataKey, Error, Heir, VaultStatus};
+use types::{DataKey, Error, Heir, ReleaseSlot, VaultStatus};
 
 /// Total basis points = 100%.
 const BPS_DENOM: u32 = 10_000;
@@ -105,6 +105,45 @@ impl PamanaVault {
         Ok(())
     }
 
+    /// Set a trust-fund release schedule for one heir (§4.5). The heir's share
+    /// is released in tranches over time instead of all at once. Slot `bps`
+    /// must sum to exactly 10_000 (= 100% of that heir's allocation). Owner-only.
+    pub fn set_schedule(
+        env: Env,
+        heir_addr: Address,
+        slots: Vec<ReleaseSlot>,
+    ) -> Result<(), Error> {
+        let store = env.storage().persistent();
+        let owner: Address = store.get(&DataKey::Owner).ok_or(Error::NotInitialized)?;
+        owner.require_auth();
+
+        let heirs: Vec<Heir> = store.get(&DataKey::Heirs).ok_or(Error::NoHeirs)?;
+        if !heirs.iter().any(|h| h.addr == heir_addr) {
+            return Err(Error::HeirNotFound);
+        }
+        if slots.is_empty() {
+            return Err(Error::InvalidBps);
+        }
+        let mut sum: u32 = 0;
+        let mut normalized: Vec<ReleaseSlot> = Vec::new(&env);
+        for s in slots.iter() {
+            sum += s.bps;
+            normalized.push_back(ReleaseSlot {
+                unlock_time: s.unlock_time,
+                bps: s.bps,
+                claimed: false,
+            });
+        }
+        if sum != BPS_DENOM {
+            return Err(Error::InvalidBps);
+        }
+
+        let key = DataKey::Schedule(heir_addr);
+        store.set(&key, &normalized);
+        bump_key(&env, &key);
+        Ok(())
+    }
+
     /// An heir claims their share. Permissionless once the owner has timed out.
     ///
     /// On the first claim the total vault balance is snapshotted into
@@ -151,12 +190,44 @@ impl PamanaVault {
         };
 
         let mut heir = heirs.get(idx).unwrap();
-        let amount = total * heir.bps as i128 / BPS_DENOM as i128;
+        let heir_share = total * heir.bps as i128 / BPS_DENOM as i128;
 
-        heir.claimed = true;
-        heirs.set(idx, heir);
-        store.set(&DataKey::Heirs, &heirs);
-        bump_key(&env, &DataKey::Heirs);
+        let schedule_key = DataKey::Schedule(heir_addr.clone());
+        let amount: i128 = if store.has(&schedule_key) {
+            // Trust-fund mode: release the next matured tranche only.
+            let mut slots: Vec<ReleaseSlot> = store.get(&schedule_key).unwrap();
+            let now = env.ledger().timestamp();
+            let mut slot_idx: Option<u32> = None;
+            for (i, s) in slots.iter().enumerate() {
+                if !s.claimed && now >= s.unlock_time {
+                    slot_idx = Some(i as u32);
+                    break;
+                }
+            }
+            let si = slot_idx.ok_or(Error::NothingMatured)?;
+            let mut slot = slots.get(si).unwrap();
+            let tranche = heir_share * slot.bps as i128 / BPS_DENOM as i128;
+            slot.claimed = true;
+            slots.set(si, slot);
+
+            // Mark the heir fully claimed only once every tranche is drained.
+            if slots.iter().all(|s| s.claimed) {
+                heir.claimed = true;
+                heirs.set(idx, heir);
+                store.set(&DataKey::Heirs, &heirs);
+                bump_key(&env, &DataKey::Heirs);
+            }
+            store.set(&schedule_key, &slots);
+            bump_key(&env, &schedule_key);
+            tranche
+        } else {
+            // Lump-sum: whole share at once, heir done.
+            heir.claimed = true;
+            heirs.set(idx, heir);
+            store.set(&DataKey::Heirs, &heirs);
+            bump_key(&env, &DataKey::Heirs);
+            heir_share
+        };
 
         client.transfer(&env.current_contract_address(), &heir_addr, &amount);
         Ok(())
@@ -210,6 +281,13 @@ impl PamanaVault {
         env.storage()
             .persistent()
             .get(&DataKey::Heirs)
+            .unwrap_or(Vec::new(&env))
+    }
+
+    pub fn get_schedule(env: Env, heir_addr: Address) -> Vec<ReleaseSlot> {
+        env.storage()
+            .persistent()
+            .get(&DataKey::Schedule(heir_addr))
             .unwrap_or(Vec::new(&env))
     }
 
