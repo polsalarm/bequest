@@ -1,63 +1,132 @@
+<div align="center">
+
 # 🪙 Pamana
 
-**Your pamana moves on its own.**
-Trustless on-chain inheritance for Filipino families — built on Stellar & Soroban.
+> Trustless on-chain inheritance for Filipino families. When you go silent, your family inherits — no company, no lawyer, no court.
 
-> Rise In × Stellar APAC Hackathon 2026 · Track: **Local Finance & Real World Access** · Deadline: **2026-07-15**
-> Paul Henry Dacalan · FEU Institute of Technology
+![Stellar](https://img.shields.io/badge/Stellar-Testnet-00B4D8?style=flat&logo=stellar&logoColor=white)
+![Soroban](https://img.shields.io/badge/Soroban-Smart%20Contracts-008055?style=flat)
+![React](https://img.shields.io/badge/React-19-61DAFB?style=flat&logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=flat&logo=typescript&logoColor=white)
+![Rust](https://img.shields.io/badge/Rust-1.80+-DEA584?style=flat&logo=rust&logoColor=black)
+![License](https://img.shields.io/badge/License-MIT-22C55E?style=flat)
+
+**Rise In × Stellar APAC Hackathon 2026** · Track: Local Finance & Real World Access · Deadline: **2026-07-15**
+
+**Docs:** [📖 Full Project Document →](Pamana-Full-Document.md) · [🗺️ Build Plan →](docs/BUILD_PLAN.md) · [🔗 Stellar Resources →](docs/STELLAR_DEVELOPER_RESOURCES.md)
+
+</div>
 
 ---
 
-## What it is
+> 🚧 **Status: In active development** — building to July 15, 2026. Live URLs, deployed contract addresses, and demo videos land as phases complete (see [Build Plan](docs/BUILD_PLAN.md)).
 
-Pamana is a self-custody Stellar wallet with inheritance enforced **entirely on-chain** by a Soroban smart contract — no company, no lawyer, no legal trust required for the inheritance to fire.
+## 🧩 Problem
+When a Filipino crypto holder dies or becomes incapacitated, their self-custodied assets are lost permanently. There is no seed-phrase recovery, no probate for private keys, no legal mechanism that reaches a wallet the way it freezes a bank account.
+- Hits hardest in families with no estate-planning culture, no lawyer access, and OFW / informal-earner members with the least cushion to absorb total loss
+- Existing "crypto inheritance" products solve this by reintroducing a custodian — an off-chain company, a foreign legal entity, or a key-share they hold
+- That inheritance only fires if the company survives and chooses to cooperate. A bank with extra steps.
 
-The owner periodically calls `check_in()` to prove they're alive, resetting a countdown. If they go silent past the timeout, designated heirs claim their share directly from the contract.
+## 🌟 Vision
+A Philippines where every crypto holder can pass on their assets trustlessly — inheritance enforced by open Stellar rails, not by a company that has to stay alive to honor it. If the app, the company, and the servers all disappear, the family still inherits.
 
-> **If our app, our company, and all our servers disappear, your family still inherits. The Stellar ledger is the executor.**
+## 🎯 Purpose
+Make inheritance a property of the asset itself. A Soroban proof-of-life vault executes the transfer on-chain the moment the owner goes silent past a timeout — no custodian in the loop at any step. Mission is real-world access and family protection, not crypto speculation.
 
-Unlike existing "crypto inheritance" products that reintroduce a custodian (off-chain company + foreign legal entity), Pamana builds the inheritance logic into the blockchain itself.
+## 👥 Target Users
+- **Owners** — OFWs and first-gen crypto holders who want their family to inherit without a lawyer or seed-phrase handoff
+- **Heirs** — the explicit design target: someone who has never touched a wallet claims with a tap, not a 24-word phrase
+- **Informal earners** — sari-sari owners, market vendors, tricycle drivers with no estate-planning access
 
-## Core features
+## ✨ Features
+- **Trustless Inheritance (Heartbeat)** — Soroban vault holds USDC; owner calls `check_in()` to prove life; if silent past timeout (default 90 days) any heir may `claim()`. No company, no key-share held by anyone
+- **Multi-Heir BPS Splits** — heirs designated in basis points (sum = 10,000); pull-based, independent claims; `TotalLocked` snapshot on first claim so no heir is shortchanged
+- **Social Recovery** — native Stellar multisig guardians (N-of-M) + SEP-30 recoverysigner; recover a lost key without a seed phrase
+- **NFC Heir Claim Card** — Tapik-style NFC tap on Android; the inheritance address is bound to the card, heir claims with a tap
+- **Time-Locked Release (Trust Fund)** — scheduled tranches (e.g. 25%/year over 4 years) enforced on-chain; each tranche claims independently
+- **PDAX PHP On/Off-Ramp** — BSP-licensed PHP ⇄ USDC: on-ramp funds a vault with pesos, off-ramp converts an heir's claim to GCash/Maya/bank
+- **RWA Asset Card** *(roadmap stub)* — mock on-chain real-world asset display
+- **Sentinel Monitor** *(roadmap stub)* — 24/7 anomaly-detection status light
 
-| Pillar | What it does |
-|--------|--------------|
-| Trustless Inheritance | Soroban heartbeat vault — heirs claim after a proof-of-life timeout |
-| Multi-Heir BPS Splits | Basis-point splits, pull-based, independent claims |
-| Social Recovery | Native Stellar multisig + SEP-30 guardians |
-| NFC Claim Card | Tap-to-claim on Android for non-crypto-native heirs |
-| Time-Locked Release | Trust-fund style scheduled disbursement |
-| PDAX On/Off-Ramp | BSP-licensed PHP ⇄ USDC conversion |
+## 🛠️ Tech Stack
+- **Frontend:** React 19 + Vite + TypeScript + Tailwind CSS
+- **Blockchain:** Stellar (Soroban smart contracts in Rust `soroban-sdk`, Stellar RPC, SEP-30) — **factory + vault** contracts
+- **Asset:** USDC via Stellar Asset Contract (SAC)
+- **Auth / signing:** Freighter wallet · passkeys / smart accounts (no seed phrase for heirs)
+- **NFC:** NTAG 424 DNA card + Web NFC API (Android)
+- **On/Off-ramp:** PDAX API (PHP ⇄ USDC)
+- **Off-chain (deferred):** Supabase — heir contacts + check-in reminders, only if wired
+- **Network:** Stellar Testnet
 
-## Architecture
+## 🚀 How to Run Locally
 
-| Layer | Technology |
-|-------|-----------|
-| Smart contracts | Soroban (Rust) — factory + vault |
-| Asset | USDC via Stellar Asset Contract (SAC) |
-| Frontend | React 19 + Vite + Tailwind |
-| Auth / signing | Freighter wallet · passkeys / smart accounts |
-| On/Off-ramp | PDAX API (PHP ⇄ USDC) |
-| NFC | NTAG 424 DNA card + Web NFC API |
-| Network | Stellar Testnet |
+### Prerequisites
+- **Node.js** 20+
+- **Rust** + wasm target — `rustup target add wasm32-unknown-unknown`
+- **[stellar-cli](https://github.com/stellar/stellar-cli)**
+- **Wallet** — [Freighter](https://www.freighter.app/) (desktop) or a passkey-capable browser
 
-## Repository structure
-
+### 1. Clone
+```bash
+git clone https://github.com/polsalarm/pamana
+cd pamana
 ```
-contracts/
-  pamana-factory/    deploys + registers an isolated vault per family
-  pamana-vault/      heartbeat, heir BPS splits, pull-based claims, TTL mgmt
-frontend/            React/Vite app (owner + heir flows)
-docs/                build plan, resources, architecture, demo script
-spec/                specifications
-UI/                  design mockups
-Pamana-Full-Document.md   full project document (source of truth)
+
+### 2. Build / test contracts
+```bash
+cd contracts
+cargo test --workspace        # unit tests (vault + factory)
+stellar contract build        # WASM for deployment
 ```
 
-## Status
+### 3. Run frontend
+```bash
+cd frontend
+cp .env.example .env.local     # fill in contract IDs + network
+npm ci
+npm run dev                    # http://localhost:5173
+```
 
-Planning complete → building. See [`docs/BUILD_PLAN.md`](docs/BUILD_PLAN.md) for the phased build order and [`docs/STELLAR_DEVELOPER_RESOURCES.md`](docs/STELLAR_DEVELOPER_RESOURCES.md) for developer links.
+### 4. Configure env (`frontend/.env.local`)
+```env
+VITE_STELLAR_NETWORK=testnet
+VITE_SOROBAN_RPC_URL=https://soroban-testnet.stellar.org
+VITE_FACTORY_CONTRACT_ID=       # from Phase 4 deploy
+VITE_USDC_SAC_ID=               # USDC SAC on testnet
 
-## License
+# PDAX ramp (server-only — never ship to client)
+PDAX_API_KEY=
+PDAX_API_SECRET=
+PDAX_BASE_URL=https://api.pdax.ph
+```
 
-TBD.
+## 🧪 Testnet Deployment
+
+Deploys in Phase 4 (see [Build Plan](docs/BUILD_PLAN.md)).
+
+| Contract | Address | Explorer |
+|----------|---------|----------|
+| PamanaFactory | `TBD` | — |
+| PamanaVault (per family) | `TBD` | — |
+
+Network: Stellar Testnet (`Test SDF Network ; September 2015`). Resets ~quarterly — redeploy + update `.env.local` after each reset.
+
+## 🎬 Demo
+
+| Item | Link |
+|------|------|
+| 🔗 Live App | TBD |
+| 🎥 Demo Video | TBD |
+| 🖼️ Pitch Deck | TBD |
+
+The stage demo (doc §7) ends on the mic-drop: kill the backend server live, re-run the heir's claim — it still works. The blockchain is the executor.
+
+## 👤 Team
+| Name | Role | GitHub |
+|------|------|--------|
+| Paul Henry Dacalan | Project Lead / Developer · Stellar Ambassador PH | [@polsalarm](https://github.com/polsalarm) |
+
+FEU Institute of Technology.
+
+## 📄 License
+MIT
