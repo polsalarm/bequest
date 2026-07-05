@@ -10,12 +10,13 @@ Living record of what changed each phase: contract IDs, deploy links, keys (publ
 
 | Item | Value |
 |------|-------|
-| Current phase | ✅ Phase 0 done → ▶ Phase 1 next |
+| Current phase | ✅ Phases 0–2 done → ▶ Phase 3 next |
 | Network | Stellar Testnet (`Test SDF Network ; September 2015`) |
 | Deployer identity | `pamana-testnet` → `GDVWTEQQHWWPB7BHGVZDNZQGNWNB4EDLOKTHHNW2AXLI7JBC6SRJM4X3` |
 | Factory contract ID | TBD (Phase 4) |
 | Vault contract ID(s) | TBD (Phase 4) |
-| USDC SAC (testnet) | TBD (Phase 1/4) |
+| Vault wasm hash | `5ee39315911c345c120c64e3ad51ba32e56ee3e71cad8b90056fecf81693042c` |
+| USDC SAC (testnet) | TBD (Phase 4) |
 | Live app URL | TBD |
 | soroban-sdk | 22.x · target `wasm32v1-none` · stellar-cli 25.2.0 |
 
@@ -65,42 +66,63 @@ Living record of what changed each phase: contract IDs, deploy links, keys (publ
 
 ---
 
-## Phase 1 — Vault core: heartbeat + single-heir claim ⬜
-**Date:** — · **Status:** Not started
+## Phase 1 — Vault core: heartbeat + single-heir claim ✅
+**Date:** 2026-07-06 · **Status:** Complete
 
 ### Changes
-- _TBD_
+- `pamana-vault` implemented: `types.rs` (Heir, VaultStatus, DataKey, Error enum) + full `lib.rs`.
+- Persistent storage with TTL bump on every mutation (§5.2 archival guard); permissionless `bump()` keepalive.
+- Vault wasm: 10 516 bytes, **13 exported functions**.
 
 ### Contract functions added
-- _init, deposit, check_in, set_heirs (single), claim (timeout gate), views_
+`init` · `deposit` · `check_in` · `set_heirs` · `claim` · `withdraw` · `bump` · views (`get_status`, `get_heirs`, `get_owner`, `get_heartbeat`, `get_timeout`)
 
-### Deploys / IDs / keys
-- _TBD_
+### Tests (part of the 16-test suite)
+| Test | Result |
+|------|--------|
+| init sets owner + Alive status | ✅ |
+| double init fails | ✅ |
+| deposit moves funds into vault | ✅ |
+| deposit zero rejected | ✅ |
+| claim before timeout rejected | ✅ |
+| check_in resets countdown | ✅ |
+| single heir claims full balance | ✅ |
+| double-claim (single heir) rejected | ✅ |
+| withdraw returns funds to owner | ✅ |
+
+### Success criteria — all met ✅
+- [x] Unit tests green (deposit, timeout gate, single-heir payout)
+
+---
+
+## Phase 2 — Multi-heir BPS + TotalLocked snapshot ✅
+**Date:** 2026-07-06 · **Status:** Complete
+
+> Built together with Phase 1 — the `TotalLocked` snapshot lives inside the `claim` path and cannot be cleanly separated. ⚠ highest-risk logic (§5.1).
+
+### Changes
+- `set_heirs` validates `sum(bps) == 10_000` and rejects otherwise; empty list rejected.
+- Pull-based independent claims; `claim` snapshots the full balance into `TotalLocked` on the **first** claim and pins `Distributing = true`; later heirs compute against the snapshot, never the shrinking live balance.
+- Double-claim guard per heir (`claimed` flag).
 
 ### Tests
 | Test | Result |
 |------|--------|
-| deposit works | — |
-| claim rejected before timeout | — |
-| claim succeeds after timeout | — |
-| single heir gets full balance | — |
+| bps sum ≠ 10000 rejected | ✅ |
+| empty heir list rejected | ✅ |
+| 7000/3000 correct, order A→B | ✅ (700 / 300) |
+| 7000/3000 correct, order B→A | ✅ (700 / 300) |
+| snapshot immutable after first claim | ✅ |
+| unknown claimant rejected | ✅ |
+| withdraw blocked after distribution starts | ✅ |
 
-### Success criteria
-- [ ] Unit tests green (deposit, timeout gate, single-heir payout)
+**Full suite: `cargo test -p pamana-vault` → 16 passed, 0 failed.**
 
----
-
-## Phase 2 — Multi-heir BPS + TotalLocked snapshot ⬜
-**Date:** — · **Status:** Not started
-
-### Changes / tests
-- _TBD — ⚠ highest-risk logic (snapshot on first claim)_
-
-### Success criteria
-- [ ] 7000/3000 heirs correct in either claim order
-- [ ] bps≠10000 rejected
-- [ ] double-claim panics
-- [ ] snapshot immutable after first claim
+### Success criteria — all met ✅
+- [x] 7000/3000 heirs correct in either claim order
+- [x] bps≠10000 rejected
+- [x] double-claim rejected
+- [x] snapshot immutable after first claim
 
 ---
 
@@ -190,3 +212,5 @@ Living record of what changed each phase: contract IDs, deploy links, keys (publ
 | Date | Phase | Summary |
 |------|-------|---------|
 | 2026-07-06 | 0 | Workspace + frontend scaffold, funded testnet identity, toolchain pinned |
+| 2026-07-06 | 1 | Vault core: init/deposit/check_in/set_heirs/claim/withdraw/bump + views |
+| 2026-07-06 | 2 | Multi-heir BPS validation + TotalLocked snapshot; 16/16 tests green |
