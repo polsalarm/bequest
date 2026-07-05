@@ -227,6 +227,26 @@ Living record of what changed each phase: contract IDs, deploy links, keys (publ
 
 ---
 
+## Appendix — Contract source layout (`lib.rs` vs `types.rs`)
+
+The vault crate is split into two source files purely for organization. They compile into **one** crate → **one** wasm.
+
+| File | Role | Contains |
+|------|------|----------|
+| `types.rs` | **Data contract** — the shapes, no behavior | `Heir`, `ReleaseSlot` structs · `DataKey` storage-key enum · `VaultStatus` enum · `Error` enum. Marked `#[contracttype]` / `#[contracterror]` so they serialize across the Soroban host boundary and appear in the generated client bindings the frontend imports. |
+| `lib.rs` | **Behavior** — the logic | The `#[contract] PamanaVault` struct + `#[contractimpl]` methods (`init`, `deposit`, `check_in`, `set_heirs`, `set_schedule`, `claim`, `bump`, `withdraw`, views), TTL helper, constants. Declares `mod types;` and uses those types. |
+
+**Why separate:** `types.rs` = *what data looks like*, `lib.rs` = *what the contract does*. Keeps the logic file readable; the data model can be referenced/changed without wading through function bodies. Standard Rust module split — nothing Soroban-specific about it.
+
+### Does the split affect the deployed contract ID? **No.**
+- **Contract ID** is derived at **deploy time** from the deployer account address + a salt (via `stellar contract deploy`). It has nothing to do with how the source is organized.
+- **Wasm hash** is derived from the **compiled bytes**. Splitting one file into two (or merging them back) produces byte-identical wasm as long as the *code* is unchanged → identical hash.
+- So file organization is invisible after `cargo build`. The ID only ever changes because you **redeploy** (new salt/deployer) or because the **logic changed** (new wasm to install). Moving code between `lib.rs` and `types.rs` does neither.
+
+> Rule of thumb: contract ID tracks *deploys*, wasm hash tracks *code*, source files track *your sanity*.
+
+---
+
 ## Change history
 | Date | Phase | Summary |
 |------|-------|---------|
