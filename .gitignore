@@ -23,6 +23,9 @@ playwright-report/
 test-results/
 qa-artifacts/
 
+# TypeScript build info
+*.tsbuildinfo
+
 # OS / editor
 .DS_Store
 Thumbs.db
