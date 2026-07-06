@@ -4,6 +4,8 @@ import { Landing } from './pages/landing/Landing'
 import { Dashboard } from './pages/owner/Dashboard'
 import { CreateVault } from './pages/owner/CreateVault'
 import { Deposit } from './pages/owner/Deposit'
+import { ManageHeirs } from './pages/owner/ManageHeirs'
+import { Claim } from './pages/heir/Claim'
 import { Placeholder } from './pages/Placeholder'
 import type { ReactNode } from 'react'
 
@@ -56,7 +58,15 @@ function App() {
         path="/heirs"
         element={
           <RequireWallet>
-            <Placeholder title="Manage Heirs" phase="Phase 6" />
+            <ManageHeirs />
+          </RequireWallet>
+        }
+      />
+      <Route
+        path="/claim"
+        element={
+          <RequireWallet>
+            <Claim />
           </RequireWallet>
         }
       />

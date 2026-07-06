@@ -63,6 +63,13 @@ export function Dashboard() {
           >
             Create My Vault
           </button>
+          <button
+            onClick={() => navigate('/claim')}
+            className="text-primary-container font-semibold text-sm mt-2 flex items-center gap-1"
+          >
+            Claiming an inheritance?
+            <Icon name="arrow_forward" className="text-base" />
+          </button>
         </div>
       </Layout>
     )
