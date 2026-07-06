@@ -109,11 +109,16 @@ VITE_SOROBAN_RPC_URL=https://soroban-testnet.stellar.org
 VITE_FACTORY_CONTRACT_ID=       # from Phase 4 deploy
 VITE_USDC_SAC_ID=               # USDC SAC on testnet
 
-# PDAX ramp (server-only — never ship to client)
-PDAX_API_KEY=
-PDAX_API_SECRET=
-PDAX_BASE_URL=https://api.pdax.ph
+# PDAX ramp (server-only — never ship to client). Auth is username/password
+# against the UAT sandbox; see docs/PDAX_API.md.
+PDAX_USERNAME=                  # PDAX institutional login (email)
+PDAX_PASSWORD=
+PDAX_BASE_URL=https://uat.services.sandbox.pdax.ph/api/pdax-api
+RAMP_RATE_FALLBACK=58           # PHP/USDC rate used when UAT OTC pricing is down
 ```
+
+> Off-ramp endpoints (`/api/pdax-rate`, `/api/pdax-withdraw`) are Vercel serverless
+> functions — the PDAX credentials stay server-side and never reach the browser.
 
 ## 🧪 Testnet Deployment
 
