@@ -55,11 +55,11 @@ impl PamanaFactory {
     }
 
     /// Deploy a fresh, isolated vault for `owner` and initialize it in one call.
-    /// Returns the new vault's address. One vault per owner.
+    /// Returns the new vault's address. One vault per owner. Tokens are added
+    /// per-vault on deposit, so no token is fixed at creation.
     pub fn create_vault(
         env: Env,
         owner: Address,
-        token: Address,
         timeout: u64,
     ) -> Result<Address, Error> {
         owner.require_auth();
@@ -87,7 +87,6 @@ impl PamanaFactory {
         let init_args: soroban_sdk::Vec<Val> = vec![
             &env,
             owner.into_val(&env),
-            token.into_val(&env),
             timeout.into_val(&env),
         ];
         env.invoke_contract::<()>(&vault_addr, &symbol_short!("init"), init_args);

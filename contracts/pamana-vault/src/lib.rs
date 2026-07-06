@@ -1,11 +1,16 @@
 #![no_std]
 
-//! Pamana inheritance vault.
+//! Pamana inheritance vault (multi-token).
 //!
-//! A Soroban proof-of-life vault. The owner deposits USDC and periodically
-//! calls `check_in` to reset a countdown. If the owner goes silent past
-//! `timeout`, designated heirs claim their basis-point share directly — no
-//! company, court, or lawyer in the loop. See `Pamana-Full-Document.md` §4–6.
+//! A Soroban proof-of-life vault. The owner deposits one or more tokens and
+//! periodically calls `check_in` to reset a countdown. If the owner goes silent
+//! past `timeout`, designated heirs claim their basis-point share of **each**
+//! token directly — no company, court, or lawyer in the loop.
+//!
+//! Each heir's `bps` share applies to every token the vault holds. Claims are
+//! per (token, heir): the total for a token is snapshotted at that token's
+//! first claim (§5.1), so later heirs are never shortchanged by a shrinking
+//! live balance. See `Pamana-Full-Document.md` §4–6.
 
 pub mod types;
 #[cfg(test)]
@@ -18,7 +23,6 @@ use types::{DataKey, Error, Heir, ReleaseSlot, VaultStatus};
 const BPS_DENOM: u32 = 10_000;
 
 // Persistent-entry TTL management (§5.2 — archival gotcha).
-// Bump generously so an idle vault never archives before the timeout fires.
 const BUMP_THRESHOLD: u32 = 100_000; // ~7 days of ledgers
 const BUMP_AMOUNT: u32 = 2_000_000; // ~115 days of ledgers
 
@@ -27,8 +31,9 @@ pub struct PamanaVault;
 
 #[contractimpl]
 impl PamanaVault {
-    /// Initialize the vault. One-time. Owner must authorize.
-    pub fn init(env: Env, owner: Address, token: Address, timeout: u64) -> Result<(), Error> {
+    /// Initialize the vault. One-time. Owner must authorize. Tokens are added
+    /// implicitly on first deposit — no token is fixed at init.
+    pub fn init(env: Env, owner: Address, timeout: u64) -> Result<(), Error> {
         let store = env.storage().persistent();
         if store.has(&DataKey::Owner) {
             return Err(Error::AlreadyInitialized);
@@ -36,33 +41,35 @@ impl PamanaVault {
         owner.require_auth();
 
         store.set(&DataKey::Owner, &owner);
-        store.set(&DataKey::Token, &token);
         store.set(&DataKey::Timeout, &timeout);
         store.set(&DataKey::LastHeartbeat, &env.ledger().timestamp());
         store.set(&DataKey::Distributing, &false);
+        store.set(&DataKey::Tokens, &Vec::<Address>::new(&env));
 
         bump_key(&env, &DataKey::Owner);
-        bump_key(&env, &DataKey::Token);
         bump_key(&env, &DataKey::Timeout);
         bump_key(&env, &DataKey::LastHeartbeat);
         bump_key(&env, &DataKey::Distributing);
+        bump_key(&env, &DataKey::Tokens);
         Ok(())
     }
 
-    /// Owner deposits `amount` of the vault token into the vault.
-    pub fn deposit(env: Env, amount: i128) -> Result<(), Error> {
+    /// Owner deposits `amount` of `token` into the vault. First deposit of a
+    /// token registers it in the vault's token set.
+    pub fn deposit(env: Env, token: Address, amount: i128) -> Result<(), Error> {
         if amount <= 0 {
             return Err(Error::InvalidAmount);
         }
         let store = env.storage().persistent();
         let owner: Address = store.get(&DataKey::Owner).ok_or(Error::NotInitialized)?;
         owner.require_auth();
-        let token: Address = store.get(&DataKey::Token).unwrap();
+
         token::Client::new(&env, &token).transfer(
             &owner,
             &env.current_contract_address(),
             &amount,
         );
+        register_token(&env, &token);
         Ok(())
     }
 
@@ -77,7 +84,7 @@ impl PamanaVault {
     }
 
     /// Designate heirs. Their `bps` must sum to exactly 10_000. Owner-only.
-    /// A single heir is just a list of length one.
+    /// A single heir is just a list of length one. Shares apply to all tokens.
     pub fn set_heirs(env: Env, heirs: Vec<Heir>) -> Result<(), Error> {
         let store = env.storage().persistent();
         let owner: Address = store.get(&DataKey::Owner).ok_or(Error::NotInitialized)?;
@@ -87,27 +94,20 @@ impl PamanaVault {
             return Err(Error::NoHeirs);
         }
         let mut sum: u32 = 0;
-        let mut normalized: Vec<Heir> = Vec::new(&env);
         for h in heirs.iter() {
             sum += h.bps;
-            normalized.push_back(Heir {
-                addr: h.addr,
-                bps: h.bps,
-                claimed: false,
-            });
         }
         if sum != BPS_DENOM {
             return Err(Error::InvalidBps);
         }
 
-        store.set(&DataKey::Heirs, &normalized);
+        store.set(&DataKey::Heirs, &heirs);
         bump_key(&env, &DataKey::Heirs);
         Ok(())
     }
 
-    /// Set a trust-fund release schedule for one heir (§4.5). The heir's share
-    /// is released in tranches over time instead of all at once. Slot `bps`
-    /// must sum to exactly 10_000 (= 100% of that heir's allocation). Owner-only.
+    /// Set a trust-fund release schedule for one heir (§4.5). Slot `bps` must
+    /// sum to exactly 10_000. Owner-only. Applies per token independently.
     pub fn set_schedule(
         env: Env,
         heir_addr: Address,
@@ -125,31 +125,23 @@ impl PamanaVault {
             return Err(Error::InvalidBps);
         }
         let mut sum: u32 = 0;
-        let mut normalized: Vec<ReleaseSlot> = Vec::new(&env);
         for s in slots.iter() {
             sum += s.bps;
-            normalized.push_back(ReleaseSlot {
-                unlock_time: s.unlock_time,
-                bps: s.bps,
-                claimed: false,
-            });
         }
         if sum != BPS_DENOM {
             return Err(Error::InvalidBps);
         }
 
         let key = DataKey::Schedule(heir_addr);
-        store.set(&key, &normalized);
+        store.set(&key, &slots);
         bump_key(&env, &key);
         Ok(())
     }
 
-    /// An heir claims their share. Permissionless once the owner has timed out.
-    ///
-    /// On the first claim the total vault balance is snapshotted into
-    /// `TotalLocked` (§5.1) so later heirs are computed against the same base,
-    /// never the shrinking live balance.
-    pub fn claim(env: Env, heir_addr: Address) -> Result<(), Error> {
+    /// An heir claims their share of `token`. Permissionless once the owner has
+    /// timed out. On the first claim of a token its balance is snapshotted into
+    /// `TotalLocked(token)` (§5.1) so later heirs compute against the same base.
+    pub fn claim(env: Env, token: Address, heir_addr: Address) -> Result<(), Error> {
         let store = env.storage().persistent();
 
         let heartbeat: u64 = store
@@ -160,72 +152,74 @@ impl PamanaVault {
             return Err(Error::OwnerStillActive);
         }
 
-        let mut heirs: Vec<Heir> = store.get(&DataKey::Heirs).ok_or(Error::NoHeirs)?;
-        let mut found: Option<u32> = None;
-        for (i, h) in heirs.iter().enumerate() {
-            if h.addr == heir_addr {
-                if h.claimed {
-                    return Err(Error::AlreadyClaimed);
-                }
-                found = Some(i as u32);
-                break;
-            }
+        // Token must have been deposited.
+        let tokens: Vec<Address> = store.get(&DataKey::Tokens).unwrap_or(Vec::new(&env));
+        if !tokens.iter().any(|t| t == token) {
+            return Err(Error::TokenNotFound);
         }
-        let idx = found.ok_or(Error::HeirNotFound)?;
 
-        let token: Address = store.get(&DataKey::Token).unwrap();
+        let heirs: Vec<Heir> = store.get(&DataKey::Heirs).ok_or(Error::NoHeirs)?;
+        let heir = heirs
+            .iter()
+            .find(|h| h.addr == heir_addr)
+            .ok_or(Error::HeirNotFound)?;
+
         let client = token::Client::new(&env, &token);
 
-        // Snapshot total on the very first claim, then lock distribution state.
-        let distributing: bool = store.get(&DataKey::Distributing).unwrap_or(false);
-        let total: i128 = if !distributing {
-            let balance = client.balance(&env.current_contract_address());
-            store.set(&DataKey::TotalLocked, &balance);
-            store.set(&DataKey::Distributing, &true);
-            bump_key(&env, &DataKey::TotalLocked);
-            bump_key(&env, &DataKey::Distributing);
-            balance
+        // Snapshot this token's total on its first claim; flag distribution.
+        let locked_key = DataKey::TotalLocked(token.clone());
+        let total: i128 = if store.has(&locked_key) {
+            store.get(&locked_key).unwrap()
         } else {
-            store.get(&DataKey::TotalLocked).unwrap()
+            let balance = client.balance(&env.current_contract_address());
+            store.set(&locked_key, &balance);
+            bump_key(&env, &locked_key);
+            if !store.get(&DataKey::Distributing).unwrap_or(false) {
+                store.set(&DataKey::Distributing, &true);
+                bump_key(&env, &DataKey::Distributing);
+            }
+            balance
         };
 
-        let mut heir = heirs.get(idx).unwrap();
         let heir_share = total * heir.bps as i128 / BPS_DENOM as i128;
 
         let schedule_key = DataKey::Schedule(heir_addr.clone());
         let amount: i128 = if store.has(&schedule_key) {
-            // Trust-fund mode: release the next matured tranche only.
-            let mut slots: Vec<ReleaseSlot> = store.get(&schedule_key).unwrap();
+            // Trust-fund mode: release the next matured tranche for this token.
+            let slots: Vec<ReleaseSlot> = store.get(&schedule_key).unwrap();
+            let claimed_key = DataKey::SlotClaimed(token.clone(), heir_addr.clone());
+            let mut claimed: Vec<bool> = store.get(&claimed_key).unwrap_or_else(|| {
+                let mut v = Vec::new(&env);
+                for _ in 0..slots.len() {
+                    v.push_back(false);
+                }
+                v
+            });
+
             let now = env.ledger().timestamp();
             let mut slot_idx: Option<u32> = None;
             for (i, s) in slots.iter().enumerate() {
-                if !s.claimed && now >= s.unlock_time {
+                if !claimed.get(i as u32).unwrap() && now >= s.unlock_time {
                     slot_idx = Some(i as u32);
                     break;
                 }
             }
             let si = slot_idx.ok_or(Error::NothingMatured)?;
-            let mut slot = slots.get(si).unwrap();
+            let slot = slots.get(si).unwrap();
             let tranche = heir_share * slot.bps as i128 / BPS_DENOM as i128;
-            slot.claimed = true;
-            slots.set(si, slot);
 
-            // Mark the heir fully claimed only once every tranche is drained.
-            if slots.iter().all(|s| s.claimed) {
-                heir.claimed = true;
-                heirs.set(idx, heir);
-                store.set(&DataKey::Heirs, &heirs);
-                bump_key(&env, &DataKey::Heirs);
-            }
-            store.set(&schedule_key, &slots);
-            bump_key(&env, &schedule_key);
+            claimed.set(si, true);
+            store.set(&claimed_key, &claimed);
+            bump_key(&env, &claimed_key);
             tranche
         } else {
-            // Lump-sum: whole share at once, heir done.
-            heir.claimed = true;
-            heirs.set(idx, heir);
-            store.set(&DataKey::Heirs, &heirs);
-            bump_key(&env, &DataKey::Heirs);
+            // Lump-sum: whole share of this token, once.
+            let claimed_key = DataKey::Claimed(token.clone(), heir_addr.clone());
+            if store.get(&claimed_key).unwrap_or(false) {
+                return Err(Error::AlreadyClaimed);
+            }
+            store.set(&claimed_key, &true);
+            bump_key(&env, &claimed_key);
             heir_share
         };
 
@@ -233,16 +227,15 @@ impl PamanaVault {
         Ok(())
     }
 
-    /// Permissionless TTL keepalive (§5.2). Anyone can call to keep an idle
-    /// vault alive on-ledger while the owner is silent.
+    /// Permissionless TTL keepalive (§5.2). Anyone can call.
     pub fn bump(env: Env) {
         bump_key(&env, &DataKey::LastHeartbeat);
         bump_key(&env, &DataKey::Heirs);
-        bump_key(&env, &DataKey::TotalLocked);
+        bump_key(&env, &DataKey::Tokens);
     }
 
-    /// Owner reclaims funds. Blocked once distribution has begun.
-    pub fn withdraw(env: Env, amount: i128) -> Result<(), Error> {
+    /// Owner reclaims `amount` of `token`. Blocked once distribution has begun.
+    pub fn withdraw(env: Env, token: Address, amount: i128) -> Result<(), Error> {
         if amount <= 0 {
             return Err(Error::InvalidAmount);
         }
@@ -252,7 +245,6 @@ impl PamanaVault {
         if store.get(&DataKey::Distributing).unwrap_or(false) {
             return Err(Error::Distributing);
         }
-        let token: Address = store.get(&DataKey::Token).unwrap();
         token::Client::new(&env, &token).transfer(
             &env.current_contract_address(),
             &owner,
@@ -277,6 +269,13 @@ impl PamanaVault {
         }
     }
 
+    pub fn get_tokens(env: Env) -> Vec<Address> {
+        env.storage()
+            .persistent()
+            .get(&DataKey::Tokens)
+            .unwrap_or(Vec::new(&env))
+    }
+
     pub fn get_heirs(env: Env) -> Vec<Heir> {
         env.storage()
             .persistent()
@@ -289,6 +288,14 @@ impl PamanaVault {
             .persistent()
             .get(&DataKey::Schedule(heir_addr))
             .unwrap_or(Vec::new(&env))
+    }
+
+    /// Whether a lump-sum heir has claimed a given token.
+    pub fn is_claimed(env: Env, token: Address, heir_addr: Address) -> bool {
+        env.storage()
+            .persistent()
+            .get(&DataKey::Claimed(token, heir_addr))
+            .unwrap_or(false)
     }
 
     pub fn get_owner(env: Env) -> Option<Address> {
@@ -307,6 +314,17 @@ impl PamanaVault {
             .persistent()
             .get(&DataKey::Timeout)
             .unwrap_or(0)
+    }
+}
+
+/// Add a token to the vault's token set if not already present.
+fn register_token(env: &Env, token: &Address) {
+    let store = env.storage().persistent();
+    let mut tokens: Vec<Address> = store.get(&DataKey::Tokens).unwrap_or(Vec::new(env));
+    if !tokens.iter().any(|t| &t == token) {
+        tokens.push_back(token.clone());
+        store.set(&DataKey::Tokens, &tokens);
+        bump_key(env, &DataKey::Tokens);
     }
 }
 

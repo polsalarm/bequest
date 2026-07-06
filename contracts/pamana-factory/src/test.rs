@@ -60,7 +60,8 @@ fn create_vault_deploys_and_initializes() {
         .register_stellar_asset_contract_v2(owner.clone())
         .address();
 
-    let vault_addr = s.factory.create_vault(&owner, &token, &300);
+    let _ = token; // vaults no longer take a token at creation
+    let vault_addr = s.factory.create_vault(&owner, &300);
 
     // Registry updated.
     assert_eq!(s.factory.get_vault(&owner), Some(vault_addr.clone()));
@@ -76,13 +77,9 @@ fn two_owners_get_isolated_vaults() {
     let s = setup();
     let owner_a = Address::generate(&s.env);
     let owner_b = Address::generate(&s.env);
-    let token = s
-        .env
-        .register_stellar_asset_contract_v2(owner_a.clone())
-        .address();
 
-    let vault_a = s.factory.create_vault(&owner_a, &token, &300);
-    let vault_b = s.factory.create_vault(&owner_b, &token, &300);
+    let vault_a = s.factory.create_vault(&owner_a, &300);
+    let vault_b = s.factory.create_vault(&owner_b, &300);
 
     assert_ne!(vault_a, vault_b);
     assert_eq!(s.factory.get_vault(&owner_a), Some(vault_a));
@@ -93,13 +90,9 @@ fn two_owners_get_isolated_vaults() {
 fn duplicate_vault_for_owner_fails() {
     let s = setup();
     let owner = Address::generate(&s.env);
-    let token = s
-        .env
-        .register_stellar_asset_contract_v2(owner.clone())
-        .address();
 
-    s.factory.create_vault(&owner, &token, &300);
-    let res = s.factory.try_create_vault(&owner, &token, &300);
+    s.factory.create_vault(&owner, &300);
+    let res = s.factory.try_create_vault(&owner, &300);
     assert_eq!(res, Err(Ok(Error::VaultExists)));
 }
 
@@ -114,22 +107,21 @@ fn factory_deployed_vault_runs_full_inheritance_flow() {
     let token_client = token::TokenClient::new(&s.env, &token);
     let token_admin = token::StellarAssetClient::new(&s.env, &token);
 
-    let vault_addr = s.factory.create_vault(&owner, &token, &300);
+    let vault_addr = s.factory.create_vault(&owner, &300);
     let v = vault::Client::new(&s.env, &vault_addr);
 
     token_admin.mint(&owner, &1_000);
-    v.deposit(&1_000);
+    v.deposit(&token, &1_000);
     v.set_heirs(&vec![
         &s.env,
         vault::Heir {
             addr: heir.clone(),
             bps: 10_000,
-            claimed: false,
         },
     ]);
 
     s.env.ledger().with_mut(|l| l.timestamp += 301);
-    v.claim(&heir);
+    v.claim(&token, &heir);
 
     assert_eq!(token_client.balance(&heir), 1_000);
     assert_eq!(token_client.balance(&vault_addr), 0);

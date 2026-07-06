@@ -1,17 +1,18 @@
 use soroban_sdk::{contracterror, contracttype, Address};
 
 /// A designated heir with a basis-point share of the vault.
-/// All heirs' `bps` must sum to exactly 10_000 (= 100%).
+/// All heirs' `bps` must sum to exactly 10_000 (= 100%). The share applies to
+/// **every** token the vault holds.
 #[contracttype]
 #[derive(Clone)]
 pub struct Heir {
     pub addr: Address,
     pub bps: u32,
-    pub claimed: bool,
 }
 
 /// One tranche of a trust-fund release schedule for a single heir.
 /// A heir's slots' `bps` sum to 10_000 (= 100% of that heir's allocation).
+/// Slot claim state is tracked per token (see `DataKey::SlotClaimed`).
 #[contracttype]
 #[derive(Clone)]
 pub struct ReleaseSlot {
@@ -19,7 +20,6 @@ pub struct ReleaseSlot {
     pub unlock_time: u64,
     /// Share of this heir's allocation released at this slot, in basis points.
     pub bps: u32,
-    pub claimed: bool,
 }
 
 /// High-level vault state, legible to a non-crypto UI.
@@ -30,21 +30,29 @@ pub enum VaultStatus {
     Alive,
     /// Timeout passed, no heir has claimed yet.
     TimedOut,
-    /// First claim taken — TotalLocked snapshot locked in.
+    /// First claim taken — distribution has begun.
     Distributing,
 }
 
 #[contracttype]
 pub enum DataKey {
     Owner,
-    Token,
     LastHeartbeat,
     Timeout,
     Heirs,
-    TotalLocked,
+    /// Vec<Address> — every token ever deposited into this vault.
+    Tokens,
+    /// i128 — snapshot of a token's balance at the first claim of that token.
+    TotalLocked(Address),
+    /// bool — distribution has begun (any token claimed). Gates withdraw.
     Distributing,
-    /// Per-heir trust-fund release schedule: `Vec<ReleaseSlot>`.
+    /// bool — lump-sum heir has claimed a given token. Key: (token, heir).
+    Claimed(Address, Address),
+    /// Vec<ReleaseSlot> — per-heir trust-fund schedule.
     Schedule(Address),
+    /// Vec<bool> — which schedule slots a heir has claimed for a token.
+    /// Key: (token, heir), parallel to that heir's Schedule.
+    SlotClaimed(Address, Address),
 }
 
 #[contracterror]
@@ -67,4 +75,6 @@ pub enum Error {
     NoHeirs = 9,
     /// A schedule was set but no tranche has matured yet.
     NothingMatured = 10,
+    /// This token has never been deposited into the vault.
+    TokenNotFound = 11,
 }
