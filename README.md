@@ -57,7 +57,7 @@ Every user is the **owner of their own vault**. The factory is a shared "vault p
 1. **Connect** — open the app, approve Freighter. The app knows your address (`GABC…YOU`) — your existing wallet, no new account.
 2. **Create your vault** — click *Create Vault* → sign in Freighter → the factory deploys a brand-new vault **just for you** (`CXYZ…MINE`). One vault per wallet.
 3. **Add heirs** — paste another Stellar address (e.g. a second Freighter wallet, your child's), set their share in basis points (splits allowed). Sign as owner. Heirs don't need to do anything yet.
-4. **Fund** — `deposit` USDC/XLM into your vault.
+4. **Fund** — `deposit` any Stellar asset (XLM, USDC, or add your own token by pasting its contract address). A vault can hold several — heirs inherit their share of each.
 5. **Stay alive** — tap *I'm Alive* (`check_in`) before the timeout to reset the countdown.
 6. **Inheritance fires** — if you go silent past the timeout, an heir connects their wallet and clicks *Claim* → their share lands in their wallet. No company, no court.
 
@@ -117,14 +117,24 @@ PDAX_BASE_URL=https://api.pdax.ph
 
 ## 🧪 Testnet Deployment
 
-Deploys in Phase 4 (see [Build Plan](docs/BUILD_PLAN.md)).
+Live on Stellar Testnet (multi-token). See [contract-deployment.md](docs/contract-deployment.md).
 
 | Contract | Address | Explorer |
 |----------|---------|----------|
-| PamanaFactory | `TBD` | — |
-| PamanaVault (per family) | `TBD` | — |
+| PamanaFactory | `CANQJ6N5BNPYY5CZWGRY7QTZKAY7IAIMSI7RPRNJZP564DROBWOG5PQM` | [Stellar Expert →](https://stellar.expert/explorer/testnet/contract/CANQJ6N5BNPYY5CZWGRY7QTZKAY7IAIMSI7RPRNJZP564DROBWOG5PQM) |
+| PamanaVault (per family) | `CDJOXNIY6FMVUBDCDYV3VXWDXVZ323WURQ3VOLSNGH6BTHBMXP7X5LJG` | [Stellar Expert →](https://stellar.expert/explorer/testnet/contract/CDJOXNIY6FMVUBDCDYV3VXWDXVZ323WURQ3VOLSNGH6BTHBMXP7X5LJG) |
 
 Network: Stellar Testnet (`Test SDF Network ; September 2015`). Resets ~quarterly — redeploy + update `.env.local` after each reset.
+
+## 🔭 Roadmap
+Honest about what's vision vs shipped. Today Pamana holds **any Stellar asset** (XLM, USDC, any SAC / SEP-41 token). Beyond that:
+
+- **Cross-chain assets** — let a vault hold and inherit assets from **other chains** (Ethereum/ERC-20, BTC, etc.), not just Stellar-native tokens. Requires a bridge / wrapped-asset layer (e.g. Allbridge, or a custody+attestation model) to represent foreign assets on Stellar. Biggest reach; kept out of the trustless core until a bridge can preserve the "no custodian" thesis.
+- **Passkey smart accounts** — heirs claim with fingerprint/face, no wallet app or seed phrase (Stellar passkey-kit + a transaction submitter).
+- **PDAX PHP on-ramp** — fund a vault with pesos (PHP→USDC), the mirror of the live off-ramp.
+- **RWA asset card** — represent a real-world asset (property, etc.) in the vault. Needs a legal entity + oracle/attestation, so it stays roadmap to avoid reintroducing a custodian.
+- **Sentinel monitor** — 24/7 anomaly-detection status light.
+- **NFC secure-element signing** — full NTAG 424 DNA cryptographic card (current NFC is a tap-to-claim touchpoint).
 
 ## 🎬 Demo
 
