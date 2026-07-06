@@ -328,6 +328,11 @@ Token list + `tokenBySac` in config; Dashboard lists every token balance; Deposi
 ### Supported tokens
 Any Stellar-network asset exposed as a Soroban token (native XLM SAC, USDC/EURC SACs, any SEP-41 contract). **Not** cross-chain (no ERC-20/BTC).
 
+### Add-your-own-token + trustline UX (2026-07-06)
+- **Add token**: Deposit → *Add token* → paste any token's SAC address → app reads `symbol`/`decimals`/`name` live off the SAC and saves it on-device (localStorage `pamana.userTokens`); it then appears as a picker chip. `config.ts` `getUserTokens/addUserToken/allTokens`.
+- **Trustline UX**: heirs claiming a **non-native** asset need a trustline first. `lib/token.ts` reads the SAC's wrapped classic asset (`name()` = `CODE:ISSUER`), checks the heir's Horizon balances, and submits `changeTrust`. Claim shows *Add trustline* before *Claim* for untrusted custom assets; native XLM skips it.
+- **Live-verified** end-to-end: vault held XLM + a custom `PAMANA` SAC; heir claimed **both** independently (XLM +49.97, PAMANA exactly 100), per-token `is_claimed` both true, re-claim rejected. SAC `name`/`symbol`/`decimals` shapes confirmed against the live PAMANA SAC.
+
 ---
 
 ## Appendix — Contract source layout (`lib.rs` vs `types.rs`)
