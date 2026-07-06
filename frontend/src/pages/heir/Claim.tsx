@@ -141,6 +141,13 @@ export function Claim() {
             <p className="text-on-surface-variant max-w-xs">
               Your share has been transferred to your wallet.
             </p>
+            <button
+              onClick={() => navigate('/offramp')}
+              className="mt-2 bg-primary-container text-on-primary h-12 px-6 rounded-full font-semibold uppercase tracking-wider flex items-center gap-2"
+            >
+              Cash out to pesos
+              <Icon name="payments" />
+            </button>
           </div>
         ) : (
           <>

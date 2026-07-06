@@ -107,9 +107,10 @@ export function Dashboard() {
           <div className="text-4xl font-bold">{balance.toLocaleString()} XLM</div>
           <div className="text-on-surface-variant text-sm">{shortAddr(vault.vaultId, 6)}</div>
         </div>
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-4 gap-3">
           <QuickAction icon="arrow_downward" label="Deposit" onClick={() => navigate('/deposit')} />
-          <QuickAction icon="person_add" label="Add Heirs" tone="amber" onClick={() => navigate('/heirs')} />
+          <QuickAction icon="person_add" label="Heirs" tone="amber" onClick={() => navigate('/heirs')} />
+          <QuickAction icon="payments" label="Cash out" onClick={() => navigate('/offramp')} />
           <QuickAction icon="arrow_upward" label="Withdraw" tone="muted" onClick={() => navigate('/withdraw')} />
         </div>
       </section>

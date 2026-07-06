@@ -7,6 +7,7 @@ import { Deposit } from './pages/owner/Deposit'
 import { ManageHeirs } from './pages/owner/ManageHeirs'
 import { Recovery } from './pages/owner/Recovery'
 import { Claim } from './pages/heir/Claim'
+import { OffRamp } from './pages/heir/OffRamp'
 import { Placeholder } from './pages/Placeholder'
 import type { ReactNode } from 'react'
 
@@ -76,6 +77,14 @@ function App() {
         element={
           <RequireWallet>
             <Recovery />
+          </RequireWallet>
+        }
+      />
+      <Route
+        path="/offramp"
+        element={
+          <RequireWallet>
+            <OffRamp />
           </RequireWallet>
         }
       />
