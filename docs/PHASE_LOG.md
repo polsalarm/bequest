@@ -10,7 +10,7 @@ Living record of what changed each phase: contract IDs, deploy links, keys (publ
 
 | Item | Value |
 |------|-------|
-| Current phase | ✅ Phases 0–8 done → ▶ Phase 9 next (stubs, polish, demo, submission) |
+| Current phase | ✅ Phases 0–9 done — build complete; demo video + pitch deck = user deliverables |
 | Network | Stellar Testnet (`Test SDF Network ; September 2015`) |
 | Deployer identity | `pamana-testnet` → `GDVWTEQQHWWPB7BHGVZDNZQGNWNB4EDLOKTHHNW2AXLI7JBC6SRJM4X3` |
 | Factory contract ID (multi-token) | `CANQJ6N5BNPYY5CZWGRY7QTZKAY7IAIMSI7RPRNJZP564DROBWOG5PQM` |
@@ -294,15 +294,24 @@ Token = native XLM SAC `CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC
 
 ---
 
-## Phase 9 — Stubs, polish, demo, submission ⬜
-**Date:** — · **Status:** Not started
+## Phase 9 — Stubs, polish, demo, submission ✅ (code deliverables)
+**Date:** 2026-07-06 · **Status:** Complete for everything buildable; video + deck are the user's to record/make
+
+### Changes
+- **RoadmapCards** component on the dashboard: Sentinel "Protected" status light + mock RWA property card (₱2.4M Quezon City lot), both labeled **Roadmap** (doc §4.7 — honest vision, not shipped).
+- **`docs/DEMO_SCRIPT.md`** — ≤4-min stage script (doc §7 adapted to live features), with cut list + honest roadmap notes + the mic-drop.
+- **`docs/SUBMISSION.md`** — form answers (track, problem, solution, Stellar integration, why-Stellar, what's-built, roadmap, links) from doc §2 + the live build.
+- **Polish**: fixed stale factory id in README status banner + `.env.example` (now the multi-token factory `CANQJ6N5…`); live app URL in README demo table.
 
 ### Deliverables
-- [ ] RWA card + Sentinel light stubs
-- [ ] Demo ≤4 min + backup video
-- [ ] Pitch deck
-- [ ] Submission form (from doc §2)
-- [ ] Live app URL + demo links added to Quick reference
+- [x] RWA card + Sentinel light stubs (roadmap-labeled)
+- [x] Demo script ≤4 min (`DEMO_SCRIPT.md`)
+- [ ] Backup demo **video** — user records
+- [ ] **Pitch deck** — user makes
+- [x] Submission answers drafted (`SUBMISSION.md`)
+- [x] Live app URL + contract links in README + Quick reference
+
+> **Win condition met:** vault live on Testnet ✅ + heir claims live ✅ + PDAX rate live ✅.
 
 ---
 
@@ -408,4 +417,5 @@ Heir taps → phone opens Chrome to the claim page, pre-filled with the owner �
 | 2026-07-06 | 8 | PDAX off-ramp: serverless rate proxy + cash-out UI; live endpoint verified (350 USDC → ₱20,300) |
 | 2026-07-06 | 8+ | Off-ramp execution UI (payout + receipt via /api/pdax-withdraw, simulated on UAT decline) |
 | 2026-07-06 | ★ | **Multi-token rework** — vaults hold many tokens per vault; contract + factory redeployed; 28 tests; frontend token pickers; live deposit verified |
+| 2026-07-06 | 9 | Roadmap stubs (RWA card + Sentinel light) + demo script + submission answers + README polish |
 | 2026-07-06 | fix | `getStatus` normalizes the Soroban enum-vec (`['Distributing']`→string) so app-wide status checks work (StatusLight, Dashboard countdown, Claim gating, Withdraw lock); withdraw + cash-out flows browser-verified |
