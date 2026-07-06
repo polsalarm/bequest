@@ -326,7 +326,7 @@ New factory `CANQJ6N5…5PQM` + vault hash `7fadec9c…`. Live CLI verified: `de
 Token list + `tokenBySac` in config; Dashboard lists every token balance; Deposit has a token picker (known + custom SAC paste); Claim shows a per-token claim list; `useVault` loads per-token balances.
 
 ### Supported tokens
-Any Stellar-network asset exposed as a Soroban token (native XLM SAC, USDC/EURC SACs, any SEP-41 contract). **Not** cross-chain (no ERC-20/BTC).
+Any Stellar-network asset exposed as a Soroban token (native XLM SAC, USDC/EURC SACs, any SEP-41 contract). **Not** cross-chain (no ERC-20/BTC) — cross-chain assets are on the **roadmap** (see README 🔭 Roadmap; needs a bridge/wrapped-asset layer that preserves the no-custodian thesis).
 
 ### Add-your-own-token + trustline UX (2026-07-06)
 - **Add token**: Deposit → *Add token* → paste any token's SAC address → app reads `symbol`/`decimals`/`name` live off the SAC and saves it on-device (localStorage `pamana.userTokens`); it then appears as a picker chip. `config.ts` `getUserTokens/addUserToken/allTokens`.
