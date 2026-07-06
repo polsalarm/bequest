@@ -300,6 +300,45 @@ The vault crate is split into two source files purely for organization. They com
 
 ---
 
+## Appendix — NFC claim cards (what to buy + how to program)
+
+Pamana's NFC is the **claim touchpoint** from doc §4.4 — a card the heir **taps** to jump straight into claiming. The card only **stores the owner's address (or a claim deep-link)**; it does **not** sign anything. Full secure-element (JavaCard) signing is explicitly deferred post-hackathon (doc §4.4 scope boundary). So a plain writable tag is all we need.
+
+### What to buy
+| Spec | Value | Notes |
+|------|-------|-------|
+| Chip | **NTAG215** (NTAG213/216 also fine) | NTAG215 = 504 bytes, the sweet spot. NTAG213 (144 B) is enough for one address/URL and cheaper. |
+| Standard | NFC Forum **Type 2**, **13.56 MHz** | Must be 13.56 MHz. **Do NOT buy 125 kHz "RFID"** — wrong frequency, won't work with phones. |
+| Form factor | PVC **cards** (credit-card size) for the family prop; **stickers**/keyfobs work too | Cards look best for the "inheritance card" demo. |
+| Quantity | 3–5 for the demo | ~₱15–50 each on Shopee/Lazada/Amazon — search **"NTAG215 NFC card"**. |
+
+**Not needed:** NTAG 424 DNA (the doc mentions it for the *future* secure-signing path) and USB readers (ACR1252U). You can program everything with a phone. Buy 424 DNA only if you later build the cryptographic secure-element flow.
+
+### Phone support (important)
+- **Android Chrome only.** Web NFC works on Android with NFC hardware (most mid/high phones).
+- **iPhone: not supported.** Safari has no Web NFC; iOS NFC is native-app-only. So the NFC path is Android-exclusive — passkey / WalletConnect mobile is the iOS fallback.
+- Desktop: no Web NFC ever → our UI **feature-detects** and hides the NFC button when unsupported.
+
+### What we store on the card
+A single **URL (URI) NDEF record** = a claim deep-link:
+```
+https://pamana-sigma.vercel.app/claim?owner=G...OWNER_ADDRESS
+```
+Heir taps → phone opens Chrome to the claim page, pre-filled with the owner → connect wallet → Claim. (We also read a plain **Text** record containing a `G...` address, as a fallback.)
+
+### How to program a card
+**Option 1 — in the Pamana app (Android):** owner opens Manage Heirs → *Program NFC card* → taps a blank tag → the app writes the deep-link via Web NFC. (Built in Phase 7.)
+
+**Option 2 — free app:** install **"NFC Tools"** (wakdev) on Android → *Write* → *Add a record* → *URL* → paste the deep-link above → *Write* → tap the tag.
+
+### How to tweak it
+- **Change the link/prefix:** edit what the app writes in `frontend/src/lib/nfc.ts` (`writeClaimCard`) — swap the base URL or the `?owner=` param.
+- **Record type:** URL (deep-link, best UX) vs Text (raw address). We write URL, read both.
+- **Point at a specific vault** instead of owner: write `?vault=C...` and have the claim page skip the owner→vault lookup. (Owner→vault via the factory registry is the default so the same card keeps working even if the vault is redeployed.)
+- **Locking:** NTAG21x can be made read-only with a lock bit (via NFC Tools) once written, so the card can't be overwritten. Optional for the demo.
+
+---
+
 ## Change history
 | Date | Phase | Summary |
 |------|-------|---------|
