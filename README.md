@@ -140,7 +140,7 @@ Honest about what's vision vs shipped. Today Pamana holds **any Stellar asset** 
 
 | Item | Link |
 |------|------|
-| 🔗 Live App | TBD |
+| 🔗 Live App | [pamana-sigma.vercel.app](https://pamana-sigma.vercel.app) |
 | 🎥 Demo Video | TBD |
 | 🖼️ Pitch Deck | TBD |
 
