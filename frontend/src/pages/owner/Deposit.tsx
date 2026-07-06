@@ -5,7 +5,8 @@ import { Icon } from '../../components/Icon'
 import { useWallet } from '../../contexts/WalletContext'
 import { useVault } from '../../lib/hooks/useVault'
 import { deposit } from '../../lib/contract'
-import { KNOWN_TOKENS } from '../../lib/config'
+import { allTokens, addUserToken, type TokenInfo } from '../../lib/config'
+import { readTokenMeta } from '../../lib/token'
 
 const isContractAddr = (a: string) => /^C[A-Z2-7]{55}$/.test(a.trim())
 
@@ -13,29 +14,58 @@ export function Deposit() {
   const { address } = useWallet()
   const vault = useVault(address)
   const navigate = useNavigate()
+
+  const [tokens, setTokens] = useState<TokenInfo[]>(() => allTokens())
+  const [selected, setSelected] = useState(tokens[0])
   const [amount, setAmount] = useState('')
-  const [tokenSac, setTokenSac] = useState(KNOWN_TOKENS[0].sac)
-  const [custom, setCustom] = useState('')
-  const [decimals, setDecimals] = useState(7)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const usingCustom = tokenSac === 'custom'
-  const effectiveSac = usingCustom ? custom.trim() : tokenSac
+  // Add-token sub-form.
+  const [adding, setAdding] = useState(false)
+  const [newSac, setNewSac] = useState('')
+  const [reading, setReading] = useState(false)
+  const [addErr, setAddErr] = useState<string | null>(null)
+
   const value = parseFloat(amount)
-  const valid =
-    !isNaN(value) &&
-    value > 0 &&
-    isContractAddr(effectiveSac) &&
-    !!vault.vaultId
+  const valid = !isNaN(value) && value > 0 && !!vault.vaultId
+
+  async function onAddToken() {
+    if (!address || !isContractAddr(newSac)) return
+    setReading(true)
+    setAddErr(null)
+    try {
+      const meta = await readTokenMeta(newSac.trim(), address)
+      const info: TokenInfo = {
+        symbol: meta.symbol,
+        sac: newSac.trim(),
+        decimals: meta.decimals,
+      }
+      const next = addUserToken(info)
+      const merged = allTokens()
+      setTokens(merged)
+      setSelected(info)
+      void next
+      setAdding(false)
+      setNewSac('')
+    } catch (e) {
+      setAddErr(
+        e instanceof Error
+          ? `Couldn't read that token: ${e.message}`
+          : 'Invalid token contract',
+      )
+    } finally {
+      setReading(false)
+    }
+  }
 
   async function onDeposit() {
     if (!address || !vault.vaultId || !valid) return
     setBusy(true)
     setError(null)
     try {
-      const stroops = BigInt(Math.round(value * 10 ** decimals))
-      await deposit(vault.vaultId, address, effectiveSac, stroops)
+      const stroops = BigInt(Math.round(value * 10 ** selected.decimals))
+      await deposit(vault.vaultId, address, selected.sac, stroops)
       navigate('/dashboard', { replace: true })
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
@@ -63,19 +93,26 @@ export function Deposit() {
 
         {/* Token picker */}
         <section className="bg-surface-container-lowest rounded-2xl p-5 card-shadow border border-outline-variant/30 flex flex-col gap-3">
-          <label className="text-xs uppercase tracking-wider text-on-surface-variant">
-            Token
-          </label>
+          <div className="flex items-center justify-between">
+            <label className="text-xs uppercase tracking-wider text-on-surface-variant">
+              Token
+            </label>
+            <button
+              onClick={() => setAdding((v) => !v)}
+              className="text-primary-container text-sm font-semibold flex items-center gap-1"
+            >
+              <Icon name={adding ? 'close' : 'add'} className="text-base" />
+              {adding ? 'Cancel' : 'Add token'}
+            </button>
+          </div>
+
           <div className="flex gap-2 flex-wrap">
-            {KNOWN_TOKENS.map((t) => (
+            {tokens.map((t) => (
               <button
                 key={t.sac}
-                onClick={() => {
-                  setTokenSac(t.sac)
-                  setDecimals(t.decimals)
-                }}
+                onClick={() => setSelected(t)}
                 className={`px-4 h-11 rounded-full font-semibold border transition ${
-                  tokenSac === t.sac
+                  selected.sac === t.sac
                     ? 'bg-primary-container text-on-primary border-primary-container'
                     : 'bg-surface border-outline-variant/40'
                 }`}
@@ -83,30 +120,36 @@ export function Deposit() {
                 {t.symbol}
               </button>
             ))}
-            <button
-              onClick={() => setTokenSac('custom')}
-              className={`px-4 h-11 rounded-full font-semibold border transition ${
-                usingCustom
-                  ? 'bg-primary-container text-on-primary border-primary-container'
-                  : 'bg-surface border-outline-variant/40'
-              }`}
-            >
-              Custom
-            </button>
           </div>
-          {usingCustom && (
-            <input
-              value={custom}
-              onChange={(e) => setCustom(e.target.value)}
-              placeholder="Token SAC address (C…)"
-              className="bg-surface-container-low rounded-lg px-3 py-2 text-sm outline-none"
-            />
+
+          {adding && (
+            <div className="flex flex-col gap-2 pt-1">
+              <input
+                value={newSac}
+                onChange={(e) => setNewSac(e.target.value)}
+                placeholder="Token contract address (C…)"
+                className="bg-surface-container-low rounded-lg px-3 py-2 text-sm outline-none"
+              />
+              <button
+                onClick={onAddToken}
+                disabled={reading || !isContractAddr(newSac)}
+                className="h-11 rounded-full bg-primary-container text-on-primary font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {reading ? 'Reading token…' : 'Add this token'}
+                {!reading && <Icon name="search" className="text-base" />}
+              </button>
+              {addErr && <p className="text-error text-xs break-words">{addErr}</p>}
+              <p className="text-xs text-on-surface-variant">
+                Paste any Stellar token's contract (SAC) address — we read its
+                symbol automatically and remember it on this device.
+              </p>
+            </div>
           )}
         </section>
 
         <section className="bg-surface-container-lowest rounded-2xl p-6 card-shadow border border-outline-variant/30">
           <label className="text-xs uppercase tracking-wider text-on-surface-variant">
-            Amount
+            Amount ({selected.symbol})
           </label>
           <input
             type="number"
@@ -125,7 +168,7 @@ export function Deposit() {
           disabled={busy || !valid}
           className="w-full h-14 rounded-full bg-primary-container text-on-primary font-semibold uppercase tracking-wider flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.98] transition disabled:opacity-60 card-shadow"
         >
-          {busy ? 'Confirming…' : 'Deposit'}
+          {busy ? 'Confirming…' : `Deposit ${selected.symbol}`}
           {!busy && <Icon name="arrow_downward" />}
         </button>
       </div>

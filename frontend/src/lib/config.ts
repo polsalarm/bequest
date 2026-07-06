@@ -29,9 +29,41 @@ export const KNOWN_TOKENS: TokenInfo[] = [
   { symbol: 'XLM', sac: NATIVE_SAC, decimals: 7 },
 ]
 
+const USER_TOKENS_KEY = 'pamana.userTokens'
+
+/** Tokens the user added themselves (persisted in localStorage). */
+export function getUserTokens(): TokenInfo[] {
+  if (typeof localStorage === 'undefined') return []
+  try {
+    return JSON.parse(localStorage.getItem(USER_TOKENS_KEY) ?? '[]')
+  } catch {
+    return []
+  }
+}
+
+/** Add (or update) a user token; de-duped by SAC. Returns the new full list. */
+export function addUserToken(t: TokenInfo): TokenInfo[] {
+  const rest = getUserTokens().filter((x) => x.sac !== t.sac)
+  const next = [...rest, t]
+  localStorage.setItem(USER_TOKENS_KEY, JSON.stringify(next))
+  return next
+}
+
+export function removeUserToken(sac: string): TokenInfo[] {
+  const next = getUserTokens().filter((x) => x.sac !== sac)
+  localStorage.setItem(USER_TOKENS_KEY, JSON.stringify(next))
+  return next
+}
+
+/** Built-in + user-added tokens. */
+export function allTokens(): TokenInfo[] {
+  const seen = new Set(KNOWN_TOKENS.map((t) => t.sac))
+  return [...KNOWN_TOKENS, ...getUserTokens().filter((t) => !seen.has(t.sac))]
+}
+
 export function tokenBySac(sac: string): TokenInfo {
   return (
-    KNOWN_TOKENS.find((t) => t.sac === sac) ?? {
+    allTokens().find((t) => t.sac === sac) ?? {
       symbol: `${sac.slice(0, 4)}…`,
       sac,
       decimals: 7,

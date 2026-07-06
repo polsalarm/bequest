@@ -16,6 +16,12 @@ import {
   type VaultStatus,
 } from '../../lib/contract'
 import { tokenBySac } from '../../lib/config'
+import {
+  readTokenMeta,
+  hasTrustline,
+  addTrustline,
+  type SacAsset,
+} from '../../lib/token'
 
 const isStellarAddr = (a: string) => /^G[A-Z2-7]{55}$/.test(a.trim())
 
@@ -24,6 +30,8 @@ interface TokenClaim {
   symbol: string
   estimate: number
   claimed: boolean
+  asset: SacAsset
+  trusted: boolean
 }
 
 interface Found {
@@ -70,17 +78,22 @@ export function Claim() {
         }
         const tokens: TokenClaim[] = await Promise.all(
           (tokenList ?? []).map(async (sac) => {
-            const [bal, claimed] = await Promise.all([
+            const [bal, claimed, meta] = await Promise.all([
               getVaultBalance(sac, vaultId, address),
               isClaimed(vaultId, sac, address, address),
+              readTokenMeta(sac, address).catch(() => null),
             ])
             const info = tokenBySac(sac)
+            const asset: SacAsset = meta?.asset ?? { native: true }
+            const decimals = meta?.decimals ?? info.decimals
+            const trusted = await hasTrustline(address, asset)
             return {
               sac,
-              symbol: info.symbol,
-              estimate:
-                (Number(bal) / 10 ** info.decimals) * (me.bps / 10000),
+              symbol: meta?.symbol ?? info.symbol,
+              estimate: (Number(bal) / 10 ** decimals) * (me.bps / 10000),
               claimed,
+              asset,
+              trusted,
             }
           }),
         )
@@ -124,6 +137,20 @@ export function Claim() {
     try {
       await claim(found.vaultId, sac, address, address)
       await lookup(owner) // refresh claimed state
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setClaimingSac(null)
+    }
+  }
+
+  async function onTrust(t: TokenClaim) {
+    if (!address) return
+    setClaimingSac(t.sac)
+    setError(null)
+    try {
+      await addTrustline(address, t.asset)
+      await lookup(owner) // refresh trusted state
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     } finally {
@@ -209,6 +236,15 @@ export function Claim() {
                       <span className="text-xs text-on-surface-variant flex items-center gap-1">
                         <Icon name="check" className="text-base" /> Claimed
                       </span>
+                    ) : !t.trusted ? (
+                      <button
+                        onClick={() => onTrust(t)}
+                        disabled={claimingSac !== null}
+                        className="h-10 px-4 rounded-full border border-primary-container/50 text-primary-container font-semibold text-sm disabled:opacity-60 flex items-center gap-1"
+                        title="Add a trustline so your wallet can hold this asset"
+                      >
+                        {claimingSac === t.sac ? 'Adding…' : 'Add trustline'}
+                      </button>
                     ) : (
                       <button
                         onClick={() => onClaim(t.sac)}
