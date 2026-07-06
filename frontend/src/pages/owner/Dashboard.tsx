@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Layout } from '../../components/Layout'
 import { Icon } from '../../components/Icon'
 import { StatusLight, statusText } from '../../components/StatusLight'
+import { RoadmapCards } from '../../components/RoadmapCards'
 import { useWallet } from '../../contexts/WalletContext'
 import { useVault } from '../../lib/hooks/useVault'
 import { checkIn } from '../../lib/contract'
@@ -184,6 +185,8 @@ export function Dashboard() {
         </div>
         <Icon name="arrow_forward" className="text-on-surface-variant" />
       </button>
+
+      <RoadmapCards />
 
       {vault.error && (
         <p className="text-error text-sm text-center">{vault.error}</p>

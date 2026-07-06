@@ -21,7 +21,7 @@
 
 > 🚧 **Status: In active development** — building to July 15, 2026.
 >
-> **▶ Live (Testnet):** https://pamana-sigma.vercel.app · contracts deployed on Stellar Testnet (factory `CAMKUF…`). Demo videos land as phases complete (see [Build Plan](docs/BUILD_PLAN.md)).
+> **▶ Live (Testnet):** https://pamana-sigma.vercel.app · multi-token contracts on Stellar Testnet (factory `CANQJ6N5…`). Demo videos land as phases complete (see [Build Plan](docs/BUILD_PLAN.md)).
 
 ## 🧩 Problem
 When a Filipino crypto holder dies or becomes incapacitated, their self-custodied assets are lost permanently. There is no seed-phrase recovery, no probate for private keys, no legal mechanism that reaches a wallet the way it freezes a bank account.
@@ -106,8 +106,8 @@ npm run dev                    # http://localhost:5173
 ```env
 VITE_STELLAR_NETWORK=testnet
 VITE_SOROBAN_RPC_URL=https://soroban-testnet.stellar.org
-VITE_FACTORY_CONTRACT_ID=       # from Phase 4 deploy
-VITE_USDC_SAC_ID=               # USDC SAC on testnet
+VITE_FACTORY_CONTRACT_ID=CANQJ6N5BNPYY5CZWGRY7QTZKAY7IAIMSI7RPRNJZP564DROBWOG5PQM
+VITE_WALLETCONNECT_PROJECT_ID=  # free at cloud.reown.com (Android wallets)
 
 # PDAX ramp (server-only — never ship to client). Auth is username/password
 # against the UAT sandbox; see docs/PDAX_API.md.
