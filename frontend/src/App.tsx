@@ -7,9 +7,19 @@ import { Deposit } from './pages/owner/Deposit'
 import { Placeholder } from './pages/Placeholder'
 import type { ReactNode } from 'react'
 
-/** Gate owner routes behind a connected wallet. */
+/** Gate owner routes behind a connected wallet. Waits for the persisted
+ *  session to restore so a hard load of a deep link doesn't bounce. */
 function RequireWallet({ children }: { children: ReactNode }) {
-  const { address } = useWallet()
+  const { address, restoring } = useWallet()
+  if (restoring) {
+    return (
+      <div className="min-h-dvh flex items-center justify-center bg-surface">
+        <span className="material-symbols-outlined animate-spin text-3xl text-primary-container">
+          progress_activity
+        </span>
+      </div>
+    )
+  }
   if (!address) return <Navigate to="/" replace />
   return <>{children}</>
 }
