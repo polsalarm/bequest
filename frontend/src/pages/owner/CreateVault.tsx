@@ -11,10 +11,16 @@ const PRESETS = [
   { label: '90 days', seconds: 90 * 86400 },
 ]
 
+const DEMO_PRESETS = [
+  { label: '30 sec', seconds: 30 },
+  { label: '60 sec', seconds: 60 },
+]
+
 export function CreateVault() {
   const { address } = useWallet()
   const navigate = useNavigate()
   const [seconds, setSeconds] = useState(PRESETS[2].seconds)
+  const [demo, setDemo] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -50,11 +56,27 @@ export function CreateVault() {
         </div>
 
         <section className="bg-surface-container-lowest rounded-2xl p-6 card-shadow border border-outline-variant/30">
-          <span className="text-xs uppercase tracking-wider text-on-surface-variant">
-            Check-in window
-          </span>
-          <div className="grid grid-cols-3 gap-3 mt-3">
-            {PRESETS.map((p) => (
+          <div className="flex items-center justify-between">
+            <span className="text-xs uppercase tracking-wider text-on-surface-variant">
+              Check-in window
+            </span>
+            <button
+              onClick={() => {
+                const next = !demo
+                setDemo(next)
+                setSeconds(next ? DEMO_PRESETS[1].seconds : PRESETS[2].seconds)
+              }}
+              className={`text-xs font-semibold px-2.5 py-1 rounded-full border transition ${
+                demo
+                  ? 'bg-amber-500/15 text-amber-500 border-amber-500/40'
+                  : 'text-on-surface-variant border-outline-variant/40 hover:border-primary-container/50'
+              }`}
+            >
+              ⚡ Demo mode
+            </button>
+          </div>
+          <div className={`grid gap-3 mt-3 ${demo ? 'grid-cols-2' : 'grid-cols-3'}`}>
+            {(demo ? DEMO_PRESETS : PRESETS).map((p) => (
               <button
                 key={p.label}
                 onClick={() => setSeconds(p.seconds)}
@@ -68,6 +90,13 @@ export function CreateVault() {
               </button>
             ))}
           </div>
+          {demo && (
+            <p className="text-xs text-amber-600 dark:text-amber-500 mt-3 flex items-start gap-1.5">
+              <Icon name="warning" className="text-sm" />
+              Demo timeout. Go silent {seconds}s → status flips to TimedOut → heirs
+              can claim. For stage use only, not real inheritance.
+            </p>
+          )}
         </section>
 
         <div className="bg-surface-container-low rounded-xl p-4 flex items-start gap-3 text-sm text-on-surface-variant">
