@@ -143,3 +143,57 @@ Safe to cut: stub features (RWA card, Sentinel), trust-fund schedule UI, NFC (fa
 
 ## Fallback
 Native Stellar claimable balances with time predicates (doc §6.4) = working dead-man's-switch if Soroban fights us in W3. Safety net only.
+
+---
+
+## Appendix A — Live Testnet death-and-claim test
+
+Proves the dead-man's-switch end-to-end on a real ledger: owner goes silent → vault times out → heir claims. The vault is **pull-based** — nothing auto-sends; the heir's `claim()` moves the funds once `now > LastHeartbeat + timeout`. This procedure just makes the wait short.
+
+### Why a short timeout
+Testnet ledger timestamp = real wall-clock. There is no time fast-forward like Rust unit tests (`test.rs` `advance_past_timeout`). So deploy a throwaway vault with a **60-second** timeout instead of the 90-day production value, then simply do not check in.
+
+### Prerequisites
+- Stellar CLI configured for Testnet; two funded identities: `owner`, `heir` (Friendbot).
+- A test SAC token the owner holds (native XLM SAC works).
+- Vault + factory wasm from Phase 4.
+
+### Steps
+1. **Deploy a vault with a 60s timeout** (via factory or direct `init`):
+   ```
+   stellar contract invoke --id <VAULT> --source owner -- \
+     init --owner <OWNER_ADDR> --timeout 60
+   ```
+2. **Fund it and set the heir at 100%:**
+   ```
+   stellar contract invoke --id <VAULT> --source owner -- \
+     deposit --token <SAC> --amount 1000
+   stellar contract invoke --id <VAULT> --source owner -- \
+     set_heirs --heirs '[{"addr":"<HEIR_ADDR>","bps":10000}]'
+   ```
+3. **Confirm alive:**
+   ```
+   stellar contract invoke --id <VAULT> -- get_status   # -> Alive
+   ```
+4. **Simulate death — do nothing.** Do NOT call `check_in`. Wait 61+ seconds.
+5. **Confirm death:**
+   ```
+   stellar contract invoke --id <VAULT> -- get_status   # -> TimedOut
+   ```
+6. **Heir claims (permissionless):**
+   ```
+   stellar contract invoke --id <VAULT> --source heir -- \
+     claim --token <SAC> --heir_addr <HEIR_ADDR>
+   ```
+7. **Verify payout:** heir balance += full share; vault balance → 0; `get_status` → `Distributing`. Confirm in Stellar Expert.
+
+### Negative check (owner still alive)
+Redo steps 1–3, then call `check_in` before the 60s elapses. `get_status` stays `Alive` and `claim` fails with `OwnerStillActive`. Proves the heartbeat reset works.
+
+### Success criteria
+- Pre-timeout claim rejected (`OwnerStillActive`).
+- Post-timeout `get_status` = `TimedOut`, then `Distributing` after first claim.
+- Correct amount lands in the heir account, visible on-chain.
+- No keeper/cron involved — the claim itself triggers the transfer.
+
+> Faster logic-only proof: `cd contracts && cargo test -p pamana-vault` (uses `advance_past_timeout`, no chain). UI-only proof: heir Claim page with `?demoCapture=1` (`devDemo.ts` `demoClaimData`). This appendix is the real end-to-end proof.
