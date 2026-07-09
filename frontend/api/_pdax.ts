@@ -13,6 +13,7 @@ const BASE =
   process.env.PDAX_BASE_URL ??
   'https://uat.services.sandbox.pdax.ph/api/pdax-api'
 const IN = `${BASE}/pdax-institution/v1`
+const IN_V2 = `${BASE}/pdax-institution/v2`
 const RATE_FALLBACK = Number(process.env.RAMP_RATE_FALLBACK ?? '58')
 
 interface Tokens {
@@ -51,9 +52,15 @@ async function tokens(): Promise<Tokens> {
 async function authed<T>(
   method: 'GET' | 'POST' | 'PUT',
   path: string,
-  opts: { query?: Record<string, string | number>; body?: unknown } = {},
+  opts: {
+    query?: Record<string, string | number>
+    body?: unknown
+    /** API version. Pricing/quotes live on v2; funding + auth on v1. */
+    v?: 1 | 2
+  } = {},
 ): Promise<T> {
   const t = await tokens()
+  const root = opts.v === 2 ? IN_V2 : IN
   const qs = opts.query
     ? '?' +
       new URLSearchParams(
@@ -62,7 +69,7 @@ async function authed<T>(
         ),
       ).toString()
     : ''
-  const res = await fetch(`${IN}${path}${qs}`, {
+  const res = await fetch(`${root}${path}${qs}`, {
     method,
     headers: {
       access_token: t.access,
@@ -91,9 +98,52 @@ export async function getBalances(): Promise<Balance[]> {
 
 export interface RateResult {
   rate: number
+  /** `live` = a real market rate was fetched; `fallback` = hardcoded constant. */
   source: 'live' | 'fallback'
+  /** Which tier produced the rate. Surfaced so a live rate is never mistaken
+   *  for a PDAX rate when it actually came from the public feed. */
+  provider: 'pdax' | 'public' | 'constant'
   base: string
   quote: string
+}
+
+/** Public spot-rate feed (Layer 1 per BUILD_PLAN decision #4) — no credentials,
+ *  works when PDAX UAT's mock OTC does not. Keyed by our currency codes. */
+const COINGECKO_IDS: Record<string, string> = {
+  USDC: 'usd-coin',
+  XLM: 'stellar',
+}
+
+let publicRateCache: { key: string; rate: number; exp: number } | null = null
+
+/** Spot `quote` per 1 `base` from the public feed. Cached 60s; null on failure. */
+async function fetchPublicRate(base: string, quote: string): Promise<number | null> {
+  const id = COINGECKO_IDS[base.toUpperCase()]
+  if (!id) return null
+  const vs = quote.toLowerCase()
+  const key = `${id}:${vs}`
+  if (publicRateCache?.key === key && Date.now() < publicRateCache.exp) {
+    return publicRateCache.rate
+  }
+
+  const ctl = new AbortController()
+  const timer = setTimeout(() => ctl.abort(), 4000)
+  try {
+    const res = await fetch(
+      `https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=${vs}`,
+      { signal: ctl.signal },
+    )
+    if (!res.ok) return null
+    const j = (await res.json()) as Record<string, Record<string, number>>
+    const rate = Number(j?.[id]?.[vs])
+    if (!Number.isFinite(rate) || rate <= 0) return null
+    publicRateCache = { key, rate, exp: Date.now() + 60_000 }
+    return rate
+  } catch {
+    return null
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
 /** Flat PHP payout fee per channel (UAT — mirrors the demo pricing). */
@@ -163,7 +213,11 @@ export async function withdrawFiat(params: {
   }
 }
 
-/** Indicative rate for base→quote. Falls back if the UAT OTC service is down. */
+/** Indicative rate for base→quote, in three tiers:
+ *  1. PDAX `/trade/price` — the real venue rate. UAT's mock OTC currently 400s.
+ *  2. Public spot feed — no credentials, always available.
+ *  3. `RAMP_RATE_FALLBACK` — last resort so the UI never blocks.
+ *  Only tier 3 reports `source: 'fallback'`. */
 export async function getRate(
   base: string,
   quote: string,
@@ -171,28 +225,33 @@ export async function getRate(
   side: 'BUY' | 'SELL',
 ): Promise<RateResult> {
   try {
-    const j = await authed<Record<string, unknown>>('GET', '/trade/price', {
+    // v2 `/trade/price`: `quote_currency` is the CRYPTO and `base_currency` is
+    // PHP — the reverse of the v1 naming. `quantity` is denominated in
+    // `currency`, and the venue enforces a minimum (e.g. >= 1 USDC).
+    const j = await authed<{ data?: { price?: number } }>('GET', '/trade/price', {
+      v: 2,
       query: {
-        base_currency: base,
-        quote_currency: quote,
-        base_quantity: baseQuantity,
-        side,
+        side: side.toLowerCase(),
+        quote_currency: base,
+        base_currency: quote,
+        currency: base,
+        quantity: baseQuantity,
       },
     })
-    // Parse defensively — UAT shape unconfirmed. Try common fields.
-    const raw =
-      (j.price as number) ??
-      (j.rate as number) ??
-      (j.average_price as number) ??
-      (j.quote_quantity != null && baseQuantity
-        ? Number(j.quote_quantity) / baseQuantity
-        : undefined)
-    const rate = Number(raw)
+    const rate = Number(j?.data?.price)
     if (Number.isFinite(rate) && rate > 0) {
-      return { rate, source: 'live', base, quote }
+      return { rate, source: 'live', provider: 'pdax', base, quote }
     }
     throw new Error('no usable price field')
-  } catch {
-    return { rate: RATE_FALLBACK, source: 'fallback', base, quote }
+  } catch (e) {
+    // PDAX unavailable (or below minimum quantity) — try the public feed.
+    console.error('[pdax getRate tier1]', e instanceof Error ? e.message : e)
   }
+
+  const spot = await fetchPublicRate(base, quote)
+  if (spot != null) {
+    return { rate: spot, source: 'live', provider: 'public', base, quote }
+  }
+
+  return { rate: RATE_FALLBACK, source: 'fallback', provider: 'constant', base, quote }
 }

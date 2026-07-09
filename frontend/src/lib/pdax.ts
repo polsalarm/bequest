@@ -4,6 +4,9 @@
 export interface RateQuote {
   rate: number
   source: 'live' | 'fallback'
+  /** Which tier produced the rate: the PDAX venue, the public spot feed, or
+   *  the hardcoded constant. `live` can mean `pdax` or `public`. */
+  provider: 'pdax' | 'public' | 'constant'
   base: string
   quote: string
   amount: number
