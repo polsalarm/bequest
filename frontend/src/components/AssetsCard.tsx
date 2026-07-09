@@ -1,10 +1,16 @@
 import { Icon } from './Icon'
+import { shortAddr } from '../lib/config'
 import { useWalletBalances } from '../lib/hooks/useWalletBalances'
 
 /** "My Assets" — the connected wallet's real balances (what you hold now,
  *  including anything just claimed from a vault). */
 export function AssetsCard({ address }: { address: string }) {
   const { balances, loading, error } = useWalletBalances(address)
+
+  // A wallet can trust the same asset code from several issuers; label those
+  // rows with the issuer so they aren't indistinguishable.
+  const seen = new Map<string, number>()
+  for (const b of balances) seen.set(b.code, (seen.get(b.code) ?? 0) + 1)
 
   return (
     <section className="bg-surface-container-lowest rounded-2xl p-6 card-shadow border border-outline-variant/30">
@@ -33,7 +39,14 @@ export function AssetsCard({ address }: { address: string }) {
               <span className="text-3xl font-bold">
                 {b.amount.toLocaleString(undefined, { maximumFractionDigits: 7 })}
               </span>
-              <span className="text-on-surface-variant font-medium">{b.code}</span>
+              <span className="text-on-surface-variant font-medium text-right">
+                {b.code}
+                {(seen.get(b.code) ?? 0) > 1 && b.issuer && (
+                  <span className="block text-xs opacity-70">
+                    {shortAddr(b.issuer)}
+                  </span>
+                )}
+              </span>
             </div>
           ))
         )}
