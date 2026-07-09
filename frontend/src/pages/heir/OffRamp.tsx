@@ -68,9 +68,17 @@ export function OffRamp() {
   const method = PAYOUTS.find((p) => p.id === payout)!
   const fee = method.fee
   const total = quote ? +(quote.php - fee).toFixed(2) : 0
+  /** PDAX enforces a minimum order size (~12 XLM). Below it the venue refuses to
+   *  quote and `getRate` silently degrades to a public spot feed — which prices
+   *  XLM very differently and which PDAX will not honour. Sending coins on the
+   *  strength of that quote would irreversibly deposit them and then fail at the
+   *  firm-quote leg. So: only the venue's own quote may authorise a transfer. */
+  const tradable = quote?.provider === 'pdax'
+
   const canSubmit =
     valid &&
     !!quote &&
+    tradable &&
     !!address &&
     destination.trim().length > 0 &&
     accountName.trim().length > 0
@@ -274,14 +282,21 @@ export function OffRamp() {
                 <span>₱{quote.rate.toFixed(2)} / {SELL_SYMBOL}</span>
                 <span
                   className={`px-2 py-0.5 rounded-full ${
-                    quote.source === 'live'
+                    tradable
                       ? 'bg-primary-container/15 text-primary-container'
                       : 'bg-secondary-container/20 text-secondary'
                   }`}
                 >
-                  {quote.source === 'live' ? '● live rate' : 'indicative rate'}
+                  {tradable ? '● PDAX rate' : 'reference only'}
                 </span>
               </div>
+              {!tradable && (
+                <p className="text-xs text-amber-700 dark:text-amber-500 bg-amber-500/15 border border-amber-500/40 rounded-lg px-3 py-2 mt-2">
+                  PDAX won't trade this amount — it's below their minimum order size
+                  (about 12 {SELL_SYMBOL}). This price is a public reference and PDAX
+                  will not honour it. Raise the amount to continue.
+                </p>
+              )}
             </>
           ) : (
             <span className="text-on-surface-variant text-sm">

@@ -295,6 +295,13 @@ export async function withdrawFiat(params: {
 
   let leg: 'quote' | 'order' | 'withdraw' = 'quote'
   try {
+    // A non-PDAX rate means the venue refused to quote this size. Selling is
+    // impossible, so say that plainly instead of failing deeper in the flow.
+    if (q.provider !== 'pdax') {
+      throw new Error(
+        `PDAX will not quote ${amount} ${asset} — likely below their minimum order size. The displayed rate came from ${q.provider}, which PDAX does not honour.`,
+      )
+    }
     if (net >= TRAVEL_RULE_THRESHOLD_PHP) {
       throw new Error(
         `payouts of PHP ${TRAVEL_RULE_THRESHOLD_PHP}+ require BSP travel-rule data (sender address / national id / dob) which this app does not collect`,
