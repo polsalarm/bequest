@@ -24,7 +24,9 @@ export async function readTokenMeta(
     const [code, issuer] = name.split(':')
     asset = { native: false, code, issuer }
   }
-  return { symbol, decimals: Number(decimals), asset }
+  // The native SAC reports its symbol as "native"; show it as XLM everywhere.
+  const display = asset.native ? 'XLM' : symbol
+  return { symbol: display, decimals: Number(decimals), asset }
 }
 
 /** Does `account` already trust this classic asset? Native never needs one. */
