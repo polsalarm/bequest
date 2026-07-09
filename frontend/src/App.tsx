@@ -10,6 +10,7 @@ import { ManageHeirs } from './pages/owner/ManageHeirs'
 import { Recovery } from './pages/owner/Recovery'
 import { Claim } from './pages/heir/Claim'
 import { OffRamp } from './pages/heir/OffRamp'
+import { CashIn } from './pages/owner/CashIn'
 import { Activity } from './pages/Activity'
 import { Nfc } from './pages/Nfc'
 import { Placeholder } from './pages/Placeholder'
@@ -97,6 +98,14 @@ function App() {
         element={
           <RequireWallet>
             <OffRamp />
+          </RequireWallet>
+        }
+      />
+      <Route
+        path="/cashin"
+        element={
+          <RequireWallet>
+            <CashIn />
           </RequireWallet>
         }
       />

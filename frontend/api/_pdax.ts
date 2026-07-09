@@ -190,6 +190,32 @@ const BANK_CODES: Record<string, string> = {
  *  / DOB. We don't collect those, so we refuse rather than send a bad request. */
 const TRAVEL_RULE_THRESHOLD_PHP = 50_000
 
+/** Cash-in payment channels PDAX accepts (docs → Accepted Values). */
+export const DEPOSIT_METHODS = [
+  'instapay_upay_cashin',
+  'gcash_cashin',
+  'grabpay_cashin',
+  'ub_online_upay_cashin',
+  'pesonet',
+] as const
+
+/** PDAX rejects cash-in below this: `PAP0500 Amount is less than the minimum
+ *  allowed limit '200'`. */
+export const MIN_DEPOSIT_PHP = 200
+
+export interface DepositResult {
+  status: 'pending' | 'failed'
+  /** PayMongo (sandbox) checkout page the payer must complete. */
+  checkoutUrl?: string
+  reference?: string
+  requestId?: string
+  amount: number
+  method: string
+  fee?: number
+  /** Present on `failed`: why PDAX rejected the request. */
+  failure?: string
+}
+
 /** Sender identity for the institutional account. Server-side env only — this
  *  is the *account holder*, not the heir, and must never come from the client. */
 function senderProfile() {
@@ -391,4 +417,87 @@ export async function getRate(
   }
 
   return { rate: RATE_FALLBACK, source: 'fallback', provider: 'constant', base, quote }
+}
+
+/** Cash-in (owner, PHP→crypto): `POST /fiat/deposit`.
+ *
+ *  PDAX requires a full BSP travel-rule payload — both parties' legal names,
+ *  and for larger amounts their DOB / national id / address. None of that comes
+ *  from the browser: the identity below is the institutional account holder,
+ *  read from server-side env, depositing to themselves (`relationship: Myself`).
+ *
+ *  The response carries a **PayMongo sandbox** checkout URL. That checkout never
+ *  settles on UAT — PDAX emails a "Cash In Failed" notice a while later — so the
+ *  crypto never actually arrives. The request itself is real; the settlement is
+ *  the part the sandbox cannot do. */
+export async function depositFiat(params: {
+  amount: number
+  method: string
+}): Promise<DepositResult> {
+  const { amount, method } = params
+
+  if (!(DEPOSIT_METHODS as readonly string[]).includes(method)) {
+    throw new Error(`unsupported deposit method "${method}"`)
+  }
+  if (amount < MIN_DEPOSIT_PHP) {
+    throw new Error(`minimum cash-in is PHP ${MIN_DEPOSIT_PHP}`)
+  }
+  if (amount >= TRAVEL_RULE_THRESHOLD_PHP) {
+    throw new Error(
+      `cash-in of PHP ${TRAVEL_RULE_THRESHOLD_PHP}+ requires BSP travel-rule data (address / national id / dob) which this app does not collect`,
+    )
+  }
+
+  const s = senderProfile()
+  // Depositing to yourself: beneficiary is the account holder.
+  // `identifier` is required even though the docs' sample body omits it.
+  const body = {
+    identifier: randomUUID(),
+    amount: String(amount),
+    currency: 'PHP',
+    method,
+    ...s,
+    sender_email: process.env.PDAX_SENDER_EMAIL ?? process.env.PDAX_USERNAME ?? '',
+    source_of_funds: 'Compensation',
+    beneficiary_first_name: s.sender_first_name,
+    beneficiary_middle_name: s.sender_middle_name,
+    beneficiary_last_name: s.sender_last_name,
+    beneficiary_country: s.sender_country_origin,
+    purpose: 'Investments/Savings',
+    relationship_of_sender_to_beneficiary: 'Myself',
+    nature_of_business: 'Allowances',
+  }
+
+  try {
+    const j = await authed<{
+      data?: {
+        request_id?: string
+        reference_number?: string
+        payment_checkout_url?: string
+        fee?: number
+        status?: string
+      }
+      // Some UAT responses are flat rather than nested under `data`.
+      request_id?: string
+      reference_number?: string
+      payment_checkout_url?: string
+      fee?: number
+      status?: string
+    }>('POST', '/fiat/deposit', { body })
+
+    const d = j?.data ?? j
+    return {
+      status: 'pending',
+      checkoutUrl: d?.payment_checkout_url,
+      reference: d?.reference_number,
+      requestId: d?.request_id,
+      fee: d?.fee,
+      amount,
+      method,
+    }
+  } catch (e) {
+    const failure = e instanceof Error ? e.message : String(e)
+    console.error('[pdax depositFiat]', failure)
+    return { status: 'failed', amount, method, failure }
+  }
 }

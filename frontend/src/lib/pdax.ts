@@ -32,6 +32,9 @@ export interface WithdrawReceipt {
   failure?: { leg: 'deposit' | 'quote' | 'order' | 'withdraw'; message: string }
   /** Stellar tx hash of the heir's deposit into PDAX custody, when one was made. */
   depositTxHash?: string
+  /** True when the peso payout sold PDAX's own balance rather than the heir's
+   *  deposit (because the sandbox never credited it). Must be surfaced. */
+  demoPayout?: boolean
 }
 
 /** Execute a USDC→PHP cash-out to a payout channel. Hits our own endpoint;
@@ -64,6 +67,45 @@ export async function getRate(
   )
   if (!res.ok) throw new Error(`rate lookup failed (${res.status})`)
   return res.json() as Promise<RateQuote>
+}
+
+/** Payment channels for cash-in. `label` is what the owner sees. */
+export const CASH_IN_METHODS = [
+  { id: 'instapay_upay_cashin', label: 'InstaPay' },
+  { id: 'gcash_cashin', label: 'GCash' },
+  { id: 'grabpay_cashin', label: 'GrabPay' },
+  { id: 'ub_online_upay_cashin', label: 'UnionBank' },
+  { id: 'pesonet', label: 'PESONet' },
+] as const
+
+export interface DepositResult {
+  status: 'pending' | 'failed'
+  checkoutUrl?: string
+  reference?: string
+  requestId?: string
+  amount: number
+  method: string
+  fee?: number
+  failure?: string
+}
+
+/** Start a PHP cash-in. Returns a checkout URL the payer must complete.
+ *  Only amount + channel leave the browser — the BSP travel-rule identity is
+ *  held server-side and never collected here. */
+export async function depositFromFiat(
+  amount: number,
+  method: string,
+): Promise<DepositResult> {
+  const res = await fetch('/api/pdax-deposit', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ amount, method }),
+  })
+  if (!res.ok) {
+    const j = (await res.json().catch(() => ({}))) as { error?: string }
+    throw new Error(j.error ?? `cash-in failed (${res.status})`)
+  }
+  return res.json() as Promise<DepositResult>
 }
 
 export interface PdaxDepositAddress {

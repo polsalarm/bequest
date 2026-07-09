@@ -6,13 +6,11 @@ import { AssetsCard } from '../../components/AssetsCard'
 import { ActivityLog } from '../../components/ActivityLog'
 import { VaultPanel } from '../../components/VaultPanel'
 import { useWallet } from '../../contexts/WalletContext'
-import { useFeedback } from '../../contexts/FeedbackContext'
 
 /** Home — what you hold, quick money actions, your vault (the core feature),
  *  recent activity, and the product vision. */
 export function Dashboard() {
   const { address } = useWallet()
-  const { toast } = useFeedback()
   const navigate = useNavigate()
 
   if (!address) return null
@@ -32,8 +30,7 @@ export function Dashboard() {
         <ActionButton
           icon="account_balance"
           label="Cash in"
-          badge="Soon"
-          onClick={() => toast('PHP on-ramp (cash in) is on the roadmap — coming soon.', 'info')}
+          onClick={() => navigate('/cashin')}
         />
         <ActionButton
           icon="redeem"

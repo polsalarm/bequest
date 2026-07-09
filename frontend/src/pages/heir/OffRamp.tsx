@@ -112,7 +112,7 @@ export function OffRamp() {
     const { ok, result } = await runTx<WithdrawReceipt>({
       confirm: {
         title: 'Confirm cash-out',
-        description: `${value} ${SELL_SYMBOL} will be sent to PDAX and paid out as ₱${total.toLocaleString()} to your ${method.label} account (rate ₱${quote!.rate.toFixed(2)}). You'll sign the transfer in your wallet.`,
+        description: `${value} ${SELL_SYMBOL} will be sent on-chain to PDAX and paid out as ₱${total.toLocaleString()} to your ${method.label} account (rate ₱${quote!.rate.toFixed(2)}). You'll sign the transfer in your wallet. PDAX's sandbox does not credit testnet deposits — if it doesn't, the payout runs against their balance instead and the receipt is marked as a demo.`,
         confirmLabel: `Cash out ₱${total.toLocaleString()}`,
       },
       pendingTitle: 'Sending to PDAX and cashing out…',
@@ -129,32 +129,19 @@ export function OffRamp() {
         await sendToExchange(address, custody, value, memo)
         const depositTxHash = consumeLastTxHash() ?? undefined
 
-        // 4. PDAX credits asynchronously. If it never does we stop here rather
-        //    than sell — selling now would liquidate the exchange's own coins
-        //    while the heir's sit uncredited.
-        const credited = await waitForCredit(SELL_SYMBOL, before, value)
-        if (!credited) {
-          return {
-            status: 'simulated',
-            reference: depositTxHash ?? `SIM-${Date.now()}`,
-            amountUsdc: value,
-            asset: SELL_SYMBOL,
-            rate: quote!.rate,
-            rateSource: quote!.source,
-            rateProvider: quote!.provider,
-            php: quote!.php,
-            fee,
-            net: total,
-            method: payout,
-            depositTxHash,
-            failure: {
-              leg: 'deposit',
-              message: `PDAX has not credited the ${SELL_SYMBOL} deposit. The transfer is confirmed on-chain; the exchange's sandbox does not credit testnet deposits.`,
-            },
-          } satisfies WithdrawReceipt
-        }
+        // 4. PDAX credits asynchronously. Its sandbox never credits testnet
+        //    deposits, so this normally times out.
+        // 45s is generous for a Stellar credit (a few ledgers) and short enough
+        // not to stall a live demo, since the sandbox never credits at all.
+        const credited = await waitForCredit(SELL_SYMBOL, before, value, {
+          timeoutMs: 45_000,
+          intervalMs: 5_000,
+        })
 
-        // 5. Now the SELL is actually selling the heir's coins.
+        // 5. Sell and pay out. If the deposit never credited, the SELL
+        //    necessarily liquidates PDAX's own balance rather than the heir's
+        //    coins — a demo, not an inheritance. The receipt is flagged so the
+        //    distinction is never lost.
         const receipt = await withdrawToFiat(
           value,
           payout,
@@ -162,32 +149,12 @@ export function OffRamp() {
           accountName.trim(),
           SELL_SYMBOL,
         )
-        return { ...receipt, depositTxHash }
+        return { ...receipt, depositTxHash, demoPayout: !credited }
       },
-    })
-    if (ok && result) setReceipt(result)
-  }
-
-  /** Deliberate escape hatch. PDAX's sandbox never credits testnet deposits, so
-   *  the peso leg can only be exercised against the exchange's own balance. That
-   *  is a demo, not an inheritance — the receipt says so, permanently. */
-  async function onDemoPayout() {
-    if (!receipt) return
-    const { ok, result } = await runTx<WithdrawReceipt>({
-      confirm: {
-        title: 'Run payout leg (demo)',
-        description: `This sells PDAX's own ${SELL_SYMBOL}, not your deposit — your ${value} ${SELL_SYMBOL} is still uncredited on-chain. It exercises the real /trade and /fiat/withdraw calls so you can see a live peso payout. The receipt will be marked as a demo.`,
-        confirmLabel: 'Run demo payout',
-      },
-      pendingTitle: 'Selling and paying out…',
-      showExplorer: false,
-      silentSuccess: true,
-      action: () =>
-        withdrawToFiat(value, payout, destination.trim(), accountName.trim(), SELL_SYMBOL),
     })
     if (ok && result) {
-      setExchangeSideDemo(true)
-      setReceipt({ ...result, depositTxHash: receipt.depositTxHash })
+      setExchangeSideDemo(!!result.demoPayout)
+      setReceipt(result)
     }
   }
 
@@ -247,14 +214,6 @@ export function OffRamp() {
             </a>
           )}
 
-          {receipt.failure?.leg === 'deposit' && !exchangeSideDemo && (
-            <button
-              onClick={onDemoPayout}
-              className="w-full h-12 rounded-full border border-amber-500/50 text-amber-700 dark:text-amber-500 font-semibold text-sm"
-            >
-              Run payout leg (demo)
-            </button>
-          )}
 
           <button
             onClick={() => navigate('/dashboard')}
