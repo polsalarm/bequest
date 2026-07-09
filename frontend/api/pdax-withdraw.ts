@@ -25,6 +25,7 @@ export default async function handler(
   const method = String(body.method ?? 'gcash').toLowerCase()
   const destination = String(body.destination ?? '').trim()
   const accountName = String(body.accountName ?? '').trim()
+  const asset = String(body.asset ?? 'USDC').toUpperCase()
 
   if (!Number.isFinite(amount) || amount <= 0) {
     res.status(400).json({ error: 'amount must be a positive number' })
@@ -40,7 +41,7 @@ export default async function handler(
   }
 
   try {
-    const receipt = await withdrawFiat({ amount, method, destination, accountName })
+    const receipt = await withdrawFiat({ amount, method, destination, accountName, asset })
     res.status(200).json(receipt)
   } catch (e) {
     res

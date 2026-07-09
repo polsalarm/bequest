@@ -98,6 +98,34 @@ export async function getBalances(): Promise<Balance[]> {
   return j.data ?? []
 }
 
+/** Available balance for one currency, 0 if the account holds none. */
+export async function getBalance(currency: string): Promise<number> {
+  const b = (await getBalances()).find(
+    (x) => x.currency.toUpperCase() === currency.toUpperCase(),
+  )
+  return b ? Number(b.available) : 0
+}
+
+export interface DepositAddress {
+  currency: string
+  address: string
+  /** Stellar memo / destination tag. Sending without it loses the funds. */
+  tag: string
+}
+
+/** PDAX custody address to deposit `currency` into.
+ *
+ *  On UAT the Stellar wallet (`XLM_TEST`) is a real **Stellar testnet** account
+ *  — verified live: it resolves on horizon-testnet and 404s on pubnet. So a
+ *  deposit here is a genuine on-chain transfer, not a simulation. */
+export async function getDepositAddress(currency: string): Promise<DepositAddress> {
+  const j = await authed<{ data?: DepositAddress }>('GET', '/crypto/deposit', {
+    query: { currency },
+  })
+  if (!j?.data?.address) throw new Error(`no deposit wallet for ${currency}`)
+  return j.data
+}
+
 export interface RateResult {
   rate: number
   /** `live` = a real market rate was fetched; `fallback` = hardcoded constant. */
@@ -189,7 +217,9 @@ export interface WithdrawResult {
    *  a demo reference. `failure` says which leg and why. */
   status: 'submitted' | 'simulated'
   reference: string
+  /** Quantity of `asset` sold. Named `amountUsdc` for backwards compatibility. */
   amountUsdc: number
+  asset: string
   rate: number
   rateSource: 'live' | 'fallback'
   rateProvider: 'pdax' | 'public' | 'constant'
@@ -215,14 +245,19 @@ export async function withdrawFiat(params: {
   method: string
   destination: string
   accountName: string
+  /** Crypto being sold. Trading symbol (`XLM`, `USDC`), not the network-suffixed
+   *  deposit code (`XLM_TEST`). */
+  asset?: string
 }): Promise<WithdrawResult> {
   const { amount, method, destination, accountName } = params
-  const q = await getRate('USDC', 'PHP', amount, 'SELL')
+  const asset = (params.asset ?? 'USDC').toUpperCase()
+  const q = await getRate(asset, 'PHP', amount, 'SELL')
   const php = +(q.rate * amount).toFixed(2)
   const fee = PAYOUT_FEES[method] ?? 15
   const net = +(php - fee).toFixed(2)
   const base = {
     amountUsdc: amount,
+    asset,
     rate: q.rate,
     rateSource: q.source,
     rateProvider: q.provider,
@@ -250,9 +285,9 @@ export async function withdrawFiat(params: {
         v: 2,
         body: {
           side: 'sell',
-          quote_currency: 'USDC',
+          quote_currency: asset,
           base_currency: 'PHP',
-          currency: 'USDC',
+          currency: asset,
           quantity: String(amount),
         },
       },

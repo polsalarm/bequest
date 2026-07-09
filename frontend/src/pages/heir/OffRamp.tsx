@@ -2,8 +2,20 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Layout } from '../../components/Layout'
 import { Icon } from '../../components/Icon'
+import { useWallet } from '../../contexts/WalletContext'
 import { useFeedback } from '../../contexts/FeedbackContext'
-import { getRate, withdrawToFiat, type RateQuote, type WithdrawReceipt } from '../../lib/pdax'
+import {
+  getRate,
+  getDepositAddress,
+  getPdaxBalance,
+  waitForCredit,
+  withdrawToFiat,
+  type RateQuote,
+  type WithdrawReceipt,
+} from '../../lib/pdax'
+import { sendToExchange } from '../../lib/token'
+import { consumeLastTxHash } from '../../lib/stellar'
+import { explorerTxUrl } from '../../lib/config'
 import { demoCaptureEnabled, demoQuote } from '../../lib/devDemo'
 
 const PAYOUTS = [
@@ -12,11 +24,25 @@ const PAYOUTS = [
   { id: 'bank', label: 'Bank', icon: 'account_balance', fee: 25, hint: 'Bank account number' },
 ]
 
-/** Off-ramp: convert claimed USDC to Philippine pesos via PDAX. Live indicative
- *  rate + quote, then execute the payout through /api/pdax-withdraw (keys stay
- *  server-side). UAT OTC is mock, so a payout may come back `simulated`. */
+/** The asset the heir cashes out. Testnet Stellar is native XLM only — PDAX has
+ *  no Stellar-testnet USDC wallet. `SELL_SYMBOL` is the trading pair symbol;
+ *  `DEPOSIT_CODE` is the network-suffixed code used to fetch the wallet. */
+const SELL_SYMBOL = 'XLM'
+const DEPOSIT_CODE = 'XLM_TEST'
+
+/** Off-ramp: convert claimed XLM to Philippine pesos via PDAX.
+ *
+ *  This is a genuine end-to-end chain, not a simulation:
+ *    1. ask PDAX for its custody address + memo
+ *    2. the heir signs a real Stellar payment into it
+ *    3. poll until PDAX credits the deposit
+ *    4. SELL XLM→PHP and pay out to GCash / Maya / bank
+ *
+ *  Steps 1–3 are the part that used to be missing: previously the SELL sold the
+ *  institutional account's own balance and the heir's coins never moved. */
 export function OffRamp() {
   const navigate = useNavigate()
+  const { address } = useWallet()
   const { runTx } = useFeedback()
   const [amount, setAmount] = useState(() => (demoCaptureEnabled() ? '350' : '100'))
   const [quote, setQuote] = useState<RateQuote | null>(() =>
@@ -39,7 +65,11 @@ export function OffRamp() {
   const fee = method.fee
   const total = quote ? +(quote.php - fee).toFixed(2) : 0
   const canSubmit =
-    valid && !!quote && destination.trim().length > 0 && accountName.trim().length > 0
+    valid &&
+    !!quote &&
+    !!address &&
+    destination.trim().length > 0 &&
+    accountName.trim().length > 0
 
   useEffect(() => {
     if (demoCaptureEnabled()) {
@@ -56,7 +86,7 @@ export function OffRamp() {
     setError(null)
     const t = setTimeout(async () => {
       try {
-        const q = await getRate(value)
+        const q = await getRate(value, SELL_SYMBOL)
         if (!cancelled) setQuote(q)
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : String(e))
@@ -71,20 +101,65 @@ export function OffRamp() {
   }, [value, valid])
 
   async function onWithdraw() {
-    if (!canSubmit) return
+    if (!canSubmit || !address) return
     setError(null)
-    // Off-chain (PDAX) — no tx hash. Confirm + pending via the modal, then the
-    // rich receipt screen below is the success surface (silentSuccess).
+    // The heir signs one on-chain payment; the rest is PDAX. Confirm + pending
+    // via the modal, then the receipt screen below is the success surface.
     const { ok, result } = await runTx<WithdrawReceipt>({
       confirm: {
         title: 'Confirm cash-out',
-        description: `Send ₱${total.toLocaleString()} to your ${method.label} account (${value} USDC at ₱${quote!.rate.toFixed(2)}).`,
-        confirmLabel: `Withdraw ₱${total.toLocaleString()}`,
+        description: `${value} ${SELL_SYMBOL} will be sent to PDAX and paid out as ₱${total.toLocaleString()} to your ${method.label} account (rate ₱${quote!.rate.toFixed(2)}). You'll sign the transfer in your wallet.`,
+        confirmLabel: `Cash out ₱${total.toLocaleString()}`,
       },
-      pendingTitle: 'Sending your payout…',
+      pendingTitle: 'Sending to PDAX and cashing out…',
       showExplorer: false,
       silentSuccess: true,
-      action: () => withdrawToFiat(value, payout, destination.trim(), accountName.trim()),
+      action: async () => {
+        // 1. Where does PDAX want the coins, and under which memo?
+        const { address: custody, memo } = await getDepositAddress(DEPOSIT_CODE)
+
+        // 2. Snapshot the balance so we can detect the credit.
+        const before = await getPdaxBalance(SELL_SYMBOL)
+
+        // 3. Real Stellar payment from the heir's wallet, memo attached.
+        await sendToExchange(address, custody, value, memo)
+        const depositTxHash = consumeLastTxHash() ?? undefined
+
+        // 4. PDAX credits asynchronously. If it never does we stop here rather
+        //    than sell — selling now would liquidate the exchange's own coins
+        //    while the heir's sit uncredited.
+        const credited = await waitForCredit(SELL_SYMBOL, before, value)
+        if (!credited) {
+          return {
+            status: 'simulated',
+            reference: depositTxHash ?? `SIM-${Date.now()}`,
+            amountUsdc: value,
+            asset: SELL_SYMBOL,
+            rate: quote!.rate,
+            rateSource: quote!.source,
+            rateProvider: quote!.provider,
+            php: quote!.php,
+            fee,
+            net: total,
+            method: payout,
+            depositTxHash,
+            failure: {
+              leg: 'deposit',
+              message: `PDAX has not credited the ${SELL_SYMBOL} deposit. The transfer is confirmed on-chain; the exchange's sandbox does not credit testnet deposits.`,
+            },
+          } satisfies WithdrawReceipt
+        }
+
+        // 5. Now the SELL is actually selling the heir's coins.
+        const receipt = await withdrawToFiat(
+          value,
+          payout,
+          destination.trim(),
+          accountName.trim(),
+          SELL_SYMBOL,
+        )
+        return { ...receipt, depositTxHash }
+      },
     })
     if (ok && result) setReceipt(result)
   }
@@ -107,8 +182,8 @@ export function OffRamp() {
           </div>
 
           <section className="w-full bg-surface-container-lowest rounded-2xl p-5 card-shadow border border-outline-variant/30 flex flex-col gap-2 text-sm text-left">
-            <Row label="Sold" value={`${receipt.amountUsdc} USDC`} />
-            <Row label="Rate" value={`₱${receipt.rate.toFixed(2)} / USDC`} />
+            <Row label="Sold" value={`${receipt.amountUsdc} ${receipt.asset}`} />
+            <Row label="Rate" value={`₱${receipt.rate.toFixed(2)} / ${receipt.asset}`} />
             <Row label="Gross" value={`₱${receipt.php.toLocaleString()}`} />
             <Row label="Fee" value={`-₱${receipt.fee}`} />
             <hr className="border-outline-variant/40 my-1" />
@@ -117,10 +192,24 @@ export function OffRamp() {
           </section>
 
           {receipt.status === 'simulated' && (
-            <p className="text-xs text-secondary bg-secondary-container/15 rounded-lg px-3 py-2">
-              Simulated payout — PDAX UAT OTC is mock, so no live PHP moved. The
-              rate and flow are real.
+            <p className="text-xs text-secondary bg-secondary-container/15 rounded-lg px-3 py-2 text-left">
+              Stopped at the <b>{receipt.failure?.leg ?? 'payout'}</b> step, so no pesos
+              were paid out.
+              {receipt.failure?.message && (
+                <span className="block mt-1 opacity-70">{receipt.failure.message}</span>
+              )}
             </p>
+          )}
+
+          {receipt.depositTxHash && (
+            <a
+              href={explorerTxUrl(receipt.depositTxHash)}
+              target="_blank"
+              rel="noreferrer"
+              className="text-sm font-semibold text-primary flex items-center gap-1"
+            >
+              View the on-chain transfer <Icon name="open_in_new" className="text-base" />
+            </a>
           )}
 
           <button
@@ -146,13 +235,13 @@ export function OffRamp() {
           </button>
           <h2 className="text-2xl font-semibold">Cash out to pesos</h2>
           <p className="text-on-surface-variant mt-1">
-            Convert your USDC to PHP via PDAX — a BSP-licensed exchange.
+            Send your claimed {SELL_SYMBOL} to PDAX — a BSP-licensed exchange — and receive pesos.
           </p>
         </div>
 
         <section className="bg-surface-container-lowest rounded-2xl p-6 card-shadow border border-outline-variant/30">
           <label className="text-xs uppercase tracking-wider text-on-surface-variant">
-            Amount (USDC)
+            Amount ({SELL_SYMBOL})
           </label>
           <input
             type="number"
@@ -179,7 +268,7 @@ export function OffRamp() {
                 </span>
               </div>
               <div className="flex justify-between items-center text-xs text-on-surface-variant">
-                <span>₱{quote.rate.toFixed(2)} / USDC</span>
+                <span>₱{quote.rate.toFixed(2)} / {SELL_SYMBOL}</span>
                 <span
                   className={`px-2 py-0.5 rounded-full ${
                     quote.source === 'live'

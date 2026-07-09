@@ -18,6 +18,7 @@ export interface WithdrawReceipt {
   status: 'submitted' | 'simulated'
   reference: string
   amountUsdc: number
+  asset: string
   rate: number
   rateSource: 'live' | 'fallback'
   rateProvider: 'pdax' | 'public' | 'constant'
@@ -25,8 +26,12 @@ export interface WithdrawReceipt {
   fee: number
   net: number
   method: string
-  /** Present when `status === 'simulated'`: which PDAX leg failed, and why. */
-  failure?: { leg: 'quote' | 'order' | 'withdraw'; message: string }
+  /** Present when `status === 'simulated'`: which leg failed, and why.
+   *  `deposit` is client-side (the on-chain transfer / PDAX crediting it);
+   *  the rest are PDAX API calls. */
+  failure?: { leg: 'deposit' | 'quote' | 'order' | 'withdraw'; message: string }
+  /** Stellar tx hash of the heir's deposit into PDAX custody, when one was made. */
+  depositTxHash?: string
 }
 
 /** Execute a USDC→PHP cash-out to a payout channel. Hits our own endpoint;
@@ -37,11 +42,12 @@ export async function withdrawToFiat(
   method: string,
   destination: string,
   accountName: string,
+  asset = 'USDC',
 ): Promise<WithdrawReceipt> {
   const res = await fetch('/api/pdax-withdraw', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ amount, method, destination, accountName }),
+    body: JSON.stringify({ amount, method, destination, accountName, asset }),
   })
   if (!res.ok) throw new Error(`withdraw failed (${res.status})`)
   return res.json() as Promise<WithdrawReceipt>
@@ -58,4 +64,48 @@ export async function getRate(
   )
   if (!res.ok) throw new Error(`rate lookup failed (${res.status})`)
   return res.json() as Promise<RateQuote>
+}
+
+export interface PdaxDepositAddress {
+  currency: string
+  address: string
+  /** Stellar memo (destination tag). Omitting it strands the deposit. */
+  memo: string
+}
+
+/** PDAX's custody address for depositing `currency`. On testnet this is a real
+ *  Stellar account, so the deposit is a genuine on-chain payment. */
+export async function getDepositAddress(
+  currency = 'XLM_TEST',
+): Promise<PdaxDepositAddress> {
+  const res = await fetch(`/api/pdax-deposit-address?currency=${currency}`)
+  if (!res.ok) throw new Error(`deposit address lookup failed (${res.status})`)
+  return res.json() as Promise<PdaxDepositAddress>
+}
+
+/** Available balance of `currency` inside the PDAX account. */
+export async function getPdaxBalance(currency = 'XLM'): Promise<number> {
+  const res = await fetch(`/api/pdax-balance?currency=${currency}`)
+  if (!res.ok) throw new Error(`balance lookup failed (${res.status})`)
+  const j = (await res.json()) as { available: number }
+  return j.available
+}
+
+/** Poll PDAX until `currency` credits by at least `delta` above `baseline`.
+ *  Crediting is asynchronous — a few ledgers plus PDAX's own confirmations. */
+export async function waitForCredit(
+  currency: string,
+  baseline: number,
+  delta: number,
+  { timeoutMs = 120_000, intervalMs = 5_000 } = {},
+): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs
+  // Allow for PDAX's network fee shaving a hair off the credited amount.
+  const target = baseline + delta * 0.98
+  while (Date.now() < deadline) {
+    const now = await getPdaxBalance(currency).catch(() => baseline)
+    if (now >= target) return true
+    await new Promise((r) => setTimeout(r, intervalMs))
+  }
+  return false
 }

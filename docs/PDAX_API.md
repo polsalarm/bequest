@@ -105,13 +105,29 @@ Verified live: selling 3 USDC moved the sandbox balance `9995 → 9992` and cred
 
 ## Funding
 
-### Crypto deposit address ✅ (schema) / 📄 (live call)
+### Crypto deposit address ✅
 ```
-GET /pdax-institution/v1/crypto/deposit?currency=USDCXLM
-→ 200 { "data": { "currency":"USDCXLM", "address":"G...", "tag":"123123123" }, "status":"success" }
+GET /pdax-institution/v1/crypto/deposit?currency=XLM_TEST
+→ 200 { "data": { "currency":"XLM_TEST", "address":"GCK2MUVH…P34G", "tag":"3228432456" }, "status":"success" }
 ```
-- `tag` is the **memo**. A Stellar deposit without the memo is unattributable and effectively lost.
-- Errors: `{ "code":400, "message":"\"currency\" is required" }`, `{ "code":"FailedRetrievingWallet", "message":"Failed retrieving USDCXLM wallet." }`
+- `tag` is the **memo** (`MEMO_ID`). A Stellar deposit without it is unattributable and effectively lost.
+- `XLM`, `XLM_TEST` and `USDCXLM` all return the **same** Stellar address, differing only in `tag`. `USDC_TEST3` returns `FailedRetrievingWallet`.
+- Errors: `{ "code":400, "message":"\"currency\" is required" }`, `{ "code":"FailedRetrievingWallet", ... }`
+
+**The UAT Stellar wallet is a real testnet account.** `GCK2MUVH…P34G` resolves on
+`horizon-testnet.stellar.org` (~21 500 XLM) and **404s on pubnet**. Depositing to it is a
+genuine on-chain transfer, not a simulation.
+
+> ⚠️ **…but UAT does not credit testnet deposits.** Verified: a 25 XLM payment with the
+> correct `MEMO_ID` (tx `2913edee…`, `successful: true`) landed — the custody account's
+> balance rose from `21492.80` to `21517.80` — yet `GET /balances` stayed at `XLM 10000`
+> and `GET /crypto/transactions` returned `[]` for over 10 minutes. The on-chain leg is
+> real; PDAX's sandbox crediting pipeline simply doesn't watch it. Anything sent this way
+> is **not recoverable** through the API.
+>
+> Consequence: a true vault→heir→PDAX→pesos chain cannot complete on UAT. The app performs
+> the real deposit, then stops at the `deposit` leg with an explorer link rather than
+> selling the exchange's own coins and pretending.
 
 ### Fiat deposit (cash-in) 📄
 ```

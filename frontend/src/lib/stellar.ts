@@ -4,6 +4,7 @@ import {
   BASE_FEE,
   Contract,
   Address,
+  Memo,
   nativeToScVal,
   scValToNative,
   xdr,
@@ -108,6 +109,9 @@ export async function writeContract<T = unknown>(
 export async function submitClassic(
   ops: xdr.Operation[],
   source: string,
+  /** Numeric destination tag (exchange memo). Required by custodial deposits —
+   *  a payment without it cannot be attributed to your account. */
+  memoId?: string,
 ): Promise<void> {
   const account = await server.getAccount(source)
   const builder = new TransactionBuilder(account, {
@@ -115,6 +119,7 @@ export async function submitClassic(
     networkPassphrase: CONFIG.networkPassphrase,
   })
   for (const op of ops) builder.addOperation(op)
+  if (memoId) builder.addMemo(Memo.id(memoId))
   const tx = builder.setTimeout(120).build()
 
   const signedXdr = await signTx(tx.toXDR(), source)

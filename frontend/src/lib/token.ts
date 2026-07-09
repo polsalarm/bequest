@@ -52,3 +52,32 @@ export async function addTrustline(account: string, asset: SacAsset) {
     account,
   )
 }
+
+/** Send a classic payment from `from` to an exchange's custody address.
+ *
+ *  `memoId` is the exchange's destination tag and is **mandatory** — a deposit
+ *  without it cannot be attributed to the account and is effectively lost. The
+ *  caller must have obtained both the address and the tag from the exchange. */
+export async function sendToExchange(
+  from: string,
+  destination: string,
+  amount: number,
+  memoId: string,
+  asset: SacAsset = { native: true },
+) {
+  if (!memoId) throw new Error('exchange deposits require a memo')
+  const stellarAsset = asset.native
+    ? Asset.native()
+    : new Asset(asset.code, asset.issuer)
+  await submitClassic(
+    [
+      Operation.payment({
+        destination,
+        asset: stellarAsset,
+        amount: amount.toFixed(7),
+      }),
+    ],
+    from,
+    memoId,
+  )
+}
