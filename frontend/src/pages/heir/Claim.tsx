@@ -23,6 +23,13 @@ import {
   addTrustline,
   type SacAsset,
 } from '../../lib/token'
+import {
+  enablePushReminders,
+  pushEnabled,
+  pushSupported,
+  notify,
+  notifyOnce,
+} from '../../lib/push'
 
 const isStellarAddr = (a: string) => /^G[A-Z2-7]{55}$/.test(a.trim())
 
@@ -45,7 +52,7 @@ interface Found {
 
 export function Claim() {
   const { address } = useWallet()
-  const { runTx } = useFeedback()
+  const { runTx, toast } = useFeedback()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const [owner, setOwner] = useState('')
@@ -54,6 +61,26 @@ export function Claim() {
   const [error, setError] = useState<string | null>(null)
   const [claimingSac, setClaimingSac] = useState<string | null>(null)
   const [scanning, setScanning] = useState(false)
+  const [pushOn, setPushOn] = useState(false)
+  const [pushBusy, setPushBusy] = useState(false)
+
+  useEffect(() => {
+    pushEnabled().then(setPushOn)
+  }, [])
+
+  async function onEnableAlerts() {
+    if (!address) return
+    setPushBusy(true)
+    try {
+      await enablePushReminders(address)
+      setPushOn(true)
+      toast('Claim alerts enabled', 'success')
+    } catch (e) {
+      toast(e instanceof Error ? e.message : 'Could not enable alerts', 'error')
+    } finally {
+      setPushBusy(false)
+    }
+  }
 
   const lookup = useCallback(
     async (ownerArg?: string) => {
@@ -118,6 +145,35 @@ export function Claim() {
     }
   }, [searchParams, address, lookup])
 
+  // Silent status re-check while a vault is found and still active — lets a
+  // subscribed heir get notified the moment it unlocks without re-clicking
+  // Find. Stops once unlocked; no need to keep polling after that.
+  useEffect(() => {
+    if (!address || !found || found.status !== 'Alive') return
+    const id = setInterval(async () => {
+      try {
+        const status = await getStatus(found.vaultId, address)
+        setFound((f) => (f ? { ...f, status } : f))
+      } catch {
+        // transient RPC hiccup — next tick retries
+      }
+    }, 8_000)
+    return () => clearInterval(id)
+  }, [address, found?.vaultId, found?.status])
+
+  const unlocked = found && (found.status === 'TimedOut' || found.status === 'Distributing')
+
+  useEffect(() => {
+    if (!pushOn || !address || !found || !unlocked) return
+    notifyOnce(`${found.vaultId}:claimable:${address}`, () =>
+      notify(
+        address,
+        'You can now claim',
+        `The vault naming you an heir (${found.sharePct}% share) is now claimable.`,
+      ),
+    )
+  }, [pushOn, address, found, unlocked])
+
   async function onScan() {
     setScanning(true)
     setError(null)
@@ -156,7 +212,14 @@ export function Claim() {
       action: () => claim(found.vaultId, t.sac, address, address),
     })
     setClaimingSac(null)
-    if (ok) await lookup(owner) // refresh claimed state
+    if (ok) {
+      notify(
+        owner.trim(),
+        'Heir claimed your vault',
+        `${t.estimate.toLocaleString()} ${t.symbol} was claimed from your vault.`,
+      )
+      await lookup(owner) // refresh claimed state
+    }
   }
 
   async function onTrust(t: TokenClaim) {
@@ -176,9 +239,6 @@ export function Claim() {
     setClaimingSac(null)
     if (ok) await lookup(owner) // refresh trusted state
   }
-
-  const unlocked =
-    found && (found.status === 'TimedOut' || found.status === 'Distributing')
 
   return (
     <Layout>
@@ -230,6 +290,17 @@ export function Claim() {
             <div className="text-on-surface-variant text-sm">
               Your share: <span className="font-bold text-on-surface">{found.sharePct}%</span>
             </div>
+
+            {!unlocked && pushSupported() && !pushOn && (
+              <button
+                onClick={onEnableAlerts}
+                disabled={pushBusy}
+                className="text-sm text-primary-container font-medium flex items-center gap-1.5 disabled:opacity-50"
+              >
+                <Icon name="notifications" className="text-base" />
+                {pushBusy ? 'Enabling…' : 'Alert me when I can claim'}
+              </button>
+            )}
 
             {!unlocked ? (
               <div className="flex items-center gap-2 text-on-surface-variant text-sm bg-surface-container-low rounded-lg px-4 py-3 mt-1">

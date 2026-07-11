@@ -72,7 +72,8 @@ Every user is the **owner of their own vault**. The factory is a shared "vault p
 - **Auth / signing:** Stellar Wallets Kit — Freighter (desktop) · LOBSTR / WalletConnect (Android). Passkey smart accounts are roadmap
 - **NFC:** plain NTAG21x tag + Web NFC API (Android Chrome only)
 - **Off-ramp:** PDAX Institutional API (crypto → PHP). Cash-in not implemented
-- **Off-chain (deferred):** Supabase — heir contacts + check-in reminders, only if wired
+- **Notifications:** Web Push (VAPID) — check-in reminders, opt-in from the vault dashboard. Demo-scoped: subscriptions are in-memory (see `frontend/api/_push.ts`), not a database, so they reset on redeploy/restart
+- **Off-chain (deferred):** Supabase — heir contacts, only if wired
 - **Network:** Stellar Testnet
 
 ## 🚀 How to Run Locally
