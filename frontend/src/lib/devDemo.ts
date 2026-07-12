@@ -1,4 +1,4 @@
-import { NATIVE_SAC } from './config'
+import { NATIVE_SAC, RWA_HOUSE_SAC } from './config'
 import type { VaultStatus, Heir } from './contract'
 
 export const DEMO_OWNER = 'GDVWTEQQHWWPB7BHGVZDNZQGNWNB4EDLOKTHHNW2AXLI7JBC6SRJM4X3'
@@ -28,6 +28,7 @@ export const demoVaultData = {
   tokens: [
     { sac: NATIVE_SAC, balanceStroops: 500_0000000n },
     { sac: DEMO_USDC_SAC, balanceStroops: 350_0000000n },
+    { sac: RWA_HOUSE_SAC, balanceStroops: 1_0000000n },
   ],
   heirs: demoHeirs,
 }

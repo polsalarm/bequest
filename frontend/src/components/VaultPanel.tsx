@@ -160,9 +160,26 @@ export function VaultPanel() {
               const info = tokenBySac(t.sac)
               const amt = Number(t.balanceStroops) / 10 ** info.decimals
               return (
-                <div key={t.sac} className="flex items-baseline justify-between">
-                  <span className="text-3xl font-bold">{amt.toLocaleString()}</span>
-                  <span className="text-on-surface-variant font-medium">{info.symbol}</span>
+                <div key={t.sac} className="flex flex-col gap-0.5">
+                  <div className="flex items-baseline justify-between">
+                    <span className="text-3xl font-bold">{amt.toLocaleString()}</span>
+                    <span className="flex items-center gap-1.5 text-on-surface-variant font-medium">
+                      {info.rwa && (
+                        <span className="text-[10px] uppercase tracking-wider font-semibold text-secondary-container bg-secondary-container/10 rounded-full px-2 py-0.5">
+                          RWA
+                        </span>
+                      )}
+                      {info.symbol}
+                    </span>
+                  </div>
+                  {info.rwa && (
+                    <div className="flex items-baseline justify-between text-xs text-on-surface-variant">
+                      <span>
+                        {info.rwa.label} · ≈ ₱{info.rwa.attestedPhp.toLocaleString()}
+                      </span>
+                      <span className="italic">{info.rwa.docRef}</span>
+                    </div>
+                  )}
                 </div>
               )
             })

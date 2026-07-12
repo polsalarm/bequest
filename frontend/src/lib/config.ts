@@ -24,9 +24,30 @@ export interface TokenInfo {
   symbol: string
   sac: string
   decimals: number
+  /** Present when this token represents a real-world asset (Phase 1: a
+   *  testnet-issued, clawback-enabled Stellar asset standing in for a title).
+   *  Drives the RWA badge + attested value in the vault UI. */
+  rwa?: { label: string; attestedPhp: number; docRef: string }
 }
+
+/** RWA title issued in Phase 1 (see docs/RWA_PHASES.md + scripts/rwa). A
+ *  regulated (revocable + clawback) testnet asset, deposited into the vault so
+ *  it inherits the dead-man's-switch + claim flow. Attested value is still a
+ *  fixed demo figure — an on-chain valuation oracle is Phase 2. */
+export const RWA_HOUSE_SAC = 'CAXFGZMPWQMZBCIV6KO5K4YBYKZQN57BWD62Q2WTHHNVZ4UO7I6OQJWT'
+
 export const KNOWN_TOKENS: TokenInfo[] = [
   { symbol: 'XLM', sac: NATIVE_SAC, decimals: 7 },
+  {
+    symbol: 'HOUSE01',
+    sac: RWA_HOUSE_SAC,
+    decimals: 7,
+    rwa: {
+      label: 'Tokenized title',
+      attestedPhp: 2_400_000,
+      docRef: 'testnet — not legally binding',
+    },
+  },
 ]
 
 const USER_TOKENS_KEY = 'pamana.userTokens'
