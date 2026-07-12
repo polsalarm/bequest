@@ -96,7 +96,7 @@ export function Nfc() {
         {status === 'done' ? (
           <div className="animate-[cardReveal_700ms_cubic-bezier(0.2,0.8,0.2,1)_both]">
             <TiltCard
-              cardClassName="w-full aspect-[1.586/1] bg-[#0b1324] text-white overflow-hidden"
+              cardClassName="w-full aspect-[1.586/1] bg-[#0f172a] text-white overflow-hidden"
               className="w-full"
               radius="20px"
               behindGlowColor="rgba(30, 91, 255, 0.4)"
