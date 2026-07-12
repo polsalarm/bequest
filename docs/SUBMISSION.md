@@ -1,3 +1,4 @@
+
 # Pamana — Hackathon Submission Answers
 
 Draft answers for the Rise In × Stellar APAC Hackathon 2026 form. Pulled from `Pamana-Full-Document.md` §2 and updated to what's actually live. Deadline **2026-07-15**.
@@ -53,5 +54,5 @@ Paul Henry Dacalan — Project Lead / Developer · Stellar Ambassador PH · FEU 
 - Live app: https://pamana-sigma.vercel.app
 - Repo: https://github.com/polsalarm/pamana
 - Factory (Stellar Expert): https://stellar.expert/explorer/testnet/contract/CANQJ6N5BNPYY5CZWGRY7QTZKAY7IAIMSI7RPRNJZP564DROBWOG5PQM
-- Demo video: _TBD_
-- Pitch deck: _TBD_
+- Demo video: `assets/video/pamana-demo-backup-2026-07-07.mp4` (local narrated backup; upload and replace with public URL before final submission)
+- Pitch deck: `docs/PITCH_DECK.md`
