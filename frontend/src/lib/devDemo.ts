@@ -1,4 +1,4 @@
-import { NATIVE_SAC, RWA_HOUSE_SAC } from './config'
+import { NATIVE_SAC, RWA_HOUSE_SAC, RWA_HOUSE_GATED_SAC } from './config'
 import type { VaultStatus, Heir } from './contract'
 
 export const DEMO_OWNER = 'GDVWTEQQHWWPB7BHGVZDNZQGNWNB4EDLOKTHHNW2AXLI7JBC6SRJM4X3'
@@ -29,6 +29,7 @@ export const demoVaultData = {
     { sac: NATIVE_SAC, balanceStroops: 500_0000000n },
     { sac: DEMO_USDC_SAC, balanceStroops: 350_0000000n },
     { sac: RWA_HOUSE_SAC, balanceStroops: 1_0000000n },
+    { sac: RWA_HOUSE_GATED_SAC, balanceStroops: 1_0000000n },
   ],
   heirs: demoHeirs,
 }
@@ -53,6 +54,16 @@ export const demoClaimData = {
       estimate: 245,
       claimed: false,
       asset: { native: false as const, code: 'USDC', issuer: DEMO_OWNER },
+      trusted: true,
+    },
+    // Phase 3 — AUTH_REQUIRED title. Trustline exists but is unauthorized, so
+    // the claim page shows the compliance gate instead of a Claim button.
+    {
+      sac: RWA_HOUSE_GATED_SAC,
+      symbol: 'HOUSE02',
+      estimate: 1,
+      claimed: false,
+      asset: { native: false as const, code: 'HOUSE02', issuer: DEMO_OWNER },
       trusted: true,
     },
   ],

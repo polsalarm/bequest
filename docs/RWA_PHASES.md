@@ -36,6 +36,35 @@ a real asset and stay legally + economically bound to it.
 
 ---
 
+---
+
+## 🚧 Demo shortcuts — read before demoing or claiming this is production
+
+Everything on-chain here is **real on testnet**. What is **simulated** is the
+*human/legal judgment* that a licensed operator would supply. Single source of
+truth:
+
+| Thing | Real? | Notes |
+|-------|-------|-------|
+| Tokenized title as a Stellar asset | ✅ real | issued, SAC-wrapped, in the vault |
+| Issuer controls (revocable, clawback) | ✅ real | issuer can freeze / claw back |
+| Inheritance of the title (deposit → timeout → heir claim) | ✅ real | uses the unchanged vault |
+| Valuation on-chain (signed attestation + doc hash) | ✅ real | `pamana-oracle` |
+| `AUTH_REQUIRED` compliance gate | ✅ real | unapproved heir's claim is **rejected by the network** |
+| Approval server authorizing a trustline | ✅ real | signs `set_authorized` with the issuer key |
+| **Who the appraiser is** | 🟡 stub | a testnet keypair, not a licensed appraiser |
+| **The appraised value** | 🟡 stub | a made-up figure attested to a demo document |
+| **The KYC / identity check** | ❌ **simulated** | `api/kyc` **auto-approves**; no identity is checked, and **no PII is read, stored, or sent** |
+| **Compliance-officer / custodian admin review** | ❌ **not built** | the auto-approve **stands in for it** |
+| Legal binding of token → property | ❌ **not built** | Phase 4; needs an SPV/custodian |
+| Redemption (token → real title transfer) | ❌ **not built** | Phase 4 |
+
+**In one line:** the *mechanisms* are real and on-chain enforced; the *decisions*
+(who is a valid appraiser, who passes KYC, who legally owns the house) are
+stubbed. Testnet. Not legally binding. Not a real KYC provider.
+
+---
+
 ## Phase 0 — Roadmap mock ✅
 **Status:** Done (current) · **Effort:** —
 
@@ -120,21 +149,73 @@ recency + appraiser, not a constant.
 
 ---
 
-## Phase 3 — Compliance gate (KYC + transfer approval)
-**Status:** Not started · **Effort:** L · **Dependency:** Phase 1; legal input
-**⚠️ Gating:** fractional / investment-like RWA is a regulated **security**
-(PH: SEC). This phase decides whether the product can legally ship at all.
+## Phase 3 — Compliance gate (KYC + transfer approval) ✅ *(mechanism; approver simulated)*
+**Status:** Done (2026-07-12) · **Effort:** L · **Dependency:** Phase 1
+**⚠️ Still gating for production:** fractional / investment-like RWA is a
+regulated **security** (PH: SEC). The *mechanism* below is built and enforced
+on-chain; shipping for real still needs a licensed operator (see Demo vs real).
 
-### Scope
-- **SEP-12 KYC** on issue and on claim — heir must clear KYC before the
-  issuer grants an authorized trustline.
-- **SEP-8 approval server** — every heir claim routes through issuer approval
-  before the vault release succeeds (uses `AUTH_REQUIRED` from Phase 1).
-- Holding-period / accreditation gates if the asset is fractionalized.
+### Scope (as built)
+- **`AUTH_REQUIRED` asset (`HOUSE02`)** — a second title carrying the compliance
+  gate, so `HOUSE01` stays ungated for a side-by-side demo. Under
+  `AUTH_REQUIRED` **no** account or contract can hold or receive the asset until
+  the issuer authorizes its trustline.
+- **Approval server** (`frontend/api/kyc.ts` + `_kyc.ts`) — the SEP-8-style
+  approver. On submit it authorizes the heir's trustline on-chain by calling the
+  SAC's `set_authorized(heir, true)` as the SAC admin (the issuer). The issuer
+  secret lives server-side only (`RWA_GATED_ISSUER_SECRET`), never in the client.
+- **Claim-page gate** — a gated title shows a `KYC` badge and a **Complete KYC**
+  button instead of **Claim**, with the blocked-state explained, plus a
+  *Simulate rejection* path.
 
-### Exit criteria
-An heir who has not cleared KYC cannot receive the RWA token; claim is blocked
-at the approval server, not just hidden in the UI.
+### Authorization mechanics (proven on testnet)
+| Holder | How the issuer authorizes it |
+|--------|------------------------------|
+| classic account (owner, heir) | `set-trustline-flags --set-authorize` |
+| **contract** (the vault) | the SAC's `set_authorized(id, true)` — classic `set-trustline-flags` cannot target a `C…` address |
+
+An unauthorized transfer **traps**: SAC `Error #11 — "balance is deauthorized"`.
+That is the gate, and it is real.
+
+### 🚧 Demo vs real — what is simulated
+**The gate is real. The compliance *decision* is stubbed.**
+
+| Piece | Status |
+|-------|--------|
+| `AUTH_REQUIRED` on-chain gate | ✅ **real** — unapproved heir's claim is rejected by the network |
+| Approval server authorizing the trustline | ✅ **real** — signs + submits `set_authorized` |
+| Blocked-claim UI state | ✅ real |
+| **The KYC / identity check** | ❌ **SIMULATED — auto-approves** |
+| Sanctions / accreditation screening | ❌ not implemented |
+| Custodian / compliance-officer admin review | ❌ **not implemented — auto-approve stands in for it** |
+
+Concretely: `api/kyc` **auto-approves on submit**. It performs **no identity
+verification**, and it deliberately **reads, stores, and transmits no PII** — the
+client's KYC form is cosmetic and only the heir's Stellar address is sent. This
+auto-approval **stands in for a real compliance officer / custodian admin
+review**. A `deny: true` flag forces the rejection path so the blocked state can
+be demonstrated.
+
+To productionize: replace the auto-approve in `api/kyc.ts` with a real SEP-12
+KYC flow and a licensed compliance decision. Everything downstream of that
+decision (the on-chain authorization, the gate, the claim) already works.
+
+**Testnet only. Not a real KYC provider. Not legally binding.**
+
+### Deliverables (as built)
+- `scripts/rwa/issue-rwa-gated.sh` — reproducible gated issuance + vault deposit.
+- `frontend/api/kyc.ts`, `frontend/api/_kyc.ts` — demo approver (server-side).
+- `frontend/src/lib/kyc.ts` — client wrapper.
+- `frontend/src/pages/heir/Claim.tsx` — KYC badge, gate, blocked state,
+  simulate-rejection.
+- `config.ts` — `RWA_HOUSE_GATED_SAC` + `TokenInfo.rwa.gated`.
+
+### Exit criteria — met
+Heir with an unauthorized trustline is blocked (`authorized = false`); the
+approver flips it (`authorized = true`) and the claim opens. Verified on testnet:
+deposit into an unauthorized vault trapped with `"balance is deauthorized"`;
+`POST /api/kyc` returned `{approved:true}` and the heir's `authorized` went
+`false → true`; `{deny:true}` returned `{approved:false}` and left it gated.
 
 ### Skills / refs
 `standards` (SEP-8, SEP-12), `assets` (regulated asset flow).
@@ -164,17 +245,21 @@ with the on-chain token clawed back / burned on completion.
 
 ## Effort & dependency summary
 
-| Phase | Scope | Effort | Legal dep | On-chain-real? |
-|-------|-------|--------|-----------|----------------|
-| 0 | Static mock | — | no | no |
-| 1 | Issued asset in vault | S–M | **no** | **yes (testnet)** |
-| 2 | Attested valuation | M | no | yes |
-| 3 | KYC + approval gate | L | yes | yes |
-| 4 | Redemption / title | L | yes (SPV) | yes |
+| Phase | Scope | Effort | Legal dep | Status |
+|-------|-------|--------|-----------|--------|
+| 0 | Static mock | — | no | ✅ superseded |
+| 1 | Issued asset in vault | S–M | no | ✅ done (testnet) |
+| 2 | Attested valuation | M | no | ✅ done (testnet) |
+| 3 | KYC + approval gate | L | for prod | ✅ mechanism done; **approver simulated** |
+| 4 | Redemption / title | L | **yes (SPV)** | ❌ not started |
 
-**Recommended next step: Phase 1** — the only phase that is pure engineering and
-has no legal dependency. It upgrades the demo from "mock card" to "real on-chain
-RWA inheritance" in ~1–2 days on the existing vault.
+**Next: Phase 4** — and it is *not* an engineering problem. It needs an SPV /
+custodian who legally holds the property and will execute a real title transfer
+on redemption. Until that partner exists, Phase 4 cannot be honestly built; the
+clawback-on-redeem plumbing is a day's work once someone can act on it.
+
+The other outstanding non-engineering item is swapping Phase 3's auto-approve
+for a real licensed KYC/compliance decision (see Demo shortcuts).
 
 ## Deliberately out of scope (why the mock stays honest)
 - Legal enforceability of a token = property claim (jurisdiction-specific).

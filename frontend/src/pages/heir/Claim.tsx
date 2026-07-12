@@ -31,6 +31,7 @@ import {
   notify,
   notifyOnce,
 } from '../../lib/push'
+import { requestKyc } from '../../lib/kyc'
 
 const isStellarAddr = (a: string) => /^G[A-Z2-7]{55}$/.test(a.trim())
 
@@ -66,6 +67,9 @@ export function Claim() {
   const [scanning, setScanning] = useState(false)
   const [pushOn, setPushOn] = useState(false)
   const [pushBusy, setPushBusy] = useState(false)
+  /** SACs whose (demo) KYC approval has come back approved this session. */
+  const [kycDone, setKycDone] = useState<Set<string>>(new Set())
+  const [kycSac, setKycSac] = useState<string | null>(null)
 
   useEffect(() => {
     pushEnabled().then(setPushOn)
@@ -230,6 +234,32 @@ export function Claim() {
     }
   }
 
+  /** Compliance gate for an AUTH_REQUIRED title. The heir's trustline exists but
+   *  is unauthorized, so a claim would trap on-chain until the issuer authorizes
+   *  it. `deny` runs the simulated-rejection path to show the blocked state.
+   *
+   *  DEMO: the approver auto-approves — it stands in for a licensed compliance
+   *  officer / custodian admin review, and checks no real identity. The on-chain
+   *  gate it opens is real. See docs/RWA_PHASES.md. */
+  async function onKyc(t: TokenClaim, deny = false) {
+    if (!address) return
+    setKycSac(t.sac)
+    try {
+      const res = await requestKyc(address, deny)
+      if (res.approved) {
+        setKycDone((s) => new Set(s).add(t.sac))
+        toast(`Compliance approved — you can now claim ${t.symbol}`, 'success')
+        await lookup(owner)
+      } else {
+        toast(res.reason ?? res.error ?? 'Compliance check declined', 'error')
+      }
+    } catch (e) {
+      toast(e instanceof Error ? e.message : 'Compliance check failed', 'error')
+    } finally {
+      setKycSac(null)
+    }
+  }
+
   async function onTrust(t: TokenClaim) {
     if (!address) return
     setClaimingSac(t.sac)
@@ -319,41 +349,87 @@ export function Claim() {
               <p className="text-on-surface-variant text-sm">This vault holds no tokens.</p>
             ) : (
               <div className="w-full flex flex-col gap-2 mt-1">
-                {found.tokens.map((t) => (
-                  <div
-                    key={t.sac}
-                    className="flex items-center justify-between bg-surface-container-low rounded-xl px-4 py-3"
-                  >
-                    <div className="text-left">
-                      <div className="font-semibold">
-                        {t.estimate.toLocaleString()} {t.symbol}
+                {found.tokens.map((t) => {
+                  const gated = tokenBySac(t.sac).rwa?.gated === true
+                  const needsKyc = gated && !kycDone.has(t.sac)
+                  return (
+                    <div
+                      key={t.sac}
+                      className="flex flex-col gap-2 bg-surface-container-low rounded-xl px-4 py-3"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="text-left">
+                          <div className="font-semibold flex items-center gap-1.5">
+                            {t.estimate.toLocaleString()} {t.symbol}
+                            {gated && (
+                              <span className="text-[10px] uppercase tracking-wider font-semibold text-secondary-container bg-secondary-container/10 rounded-full px-2 py-0.5">
+                                KYC
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-xs text-on-surface-variant">your share</div>
+                        </div>
+                        {t.claimed ? (
+                          <span className="text-xs text-on-surface-variant flex items-center gap-1">
+                            <Icon name="check" className="text-base" /> Claimed
+                          </span>
+                        ) : !t.trusted ? (
+                          <button
+                            onClick={() => onTrust(t)}
+                            disabled={claimingSac !== null}
+                            className="h-10 px-4 rounded-full border border-primary-container/50 text-primary-container font-semibold text-sm disabled:opacity-60 flex items-center gap-1"
+                            title="Add a trustline so your wallet can hold this asset"
+                          >
+                            {claimingSac === t.sac ? 'Adding…' : 'Add trustline'}
+                          </button>
+                        ) : needsKyc ? (
+                          <button
+                            onClick={() => onKyc(t)}
+                            disabled={kycSac !== null}
+                            className="h-10 px-4 rounded-full border border-secondary-container/50 text-secondary-container font-semibold text-sm disabled:opacity-60"
+                            title="This title requires compliance approval before it can be claimed"
+                          >
+                            {kycSac === t.sac ? 'Checking…' : 'Complete KYC'}
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => onClaim(t)}
+                            disabled={claimingSac !== null}
+                            className="h-10 px-4 rounded-full bg-primary-container text-on-primary font-semibold text-sm disabled:opacity-60"
+                          >
+                            {claimingSac === t.sac ? 'Claiming…' : 'Claim'}
+                          </button>
+                        )}
                       </div>
-                      <div className="text-xs text-on-surface-variant">your share</div>
+
+                      {/* Compliance gate — real on-chain (AUTH_REQUIRED); the
+                          approval DECISION is simulated for the demo. */}
+                      {!t.claimed && t.trusted && needsKyc && (
+                        <div className="text-left text-xs text-on-surface-variant border-t border-outline-variant/30 pt-2">
+                          <div className="flex items-start gap-1.5">
+                            <Icon name="lock" className="text-sm mt-0.5" />
+                            <span>
+                              Regulated title — your trustline is <b>not yet authorized</b>,
+                              so a claim would be rejected on-chain until the issuer
+                              approves it.
+                            </span>
+                          </div>
+                          <div className="mt-1.5 italic">
+                            Demo: approval is simulated — a licensed compliance operator
+                            plugs in here. No identity data is collected.{' '}
+                            <button
+                              onClick={() => onKyc(t, true)}
+                              disabled={kycSac !== null}
+                              className="underline disabled:opacity-60 not-italic"
+                            >
+                              Simulate rejection
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    {t.claimed ? (
-                      <span className="text-xs text-on-surface-variant flex items-center gap-1">
-                        <Icon name="check" className="text-base" /> Claimed
-                      </span>
-                    ) : !t.trusted ? (
-                      <button
-                        onClick={() => onTrust(t)}
-                        disabled={claimingSac !== null}
-                        className="h-10 px-4 rounded-full border border-primary-container/50 text-primary-container font-semibold text-sm disabled:opacity-60 flex items-center gap-1"
-                        title="Add a trustline so your wallet can hold this asset"
-                      >
-                        {claimingSac === t.sac ? 'Adding…' : 'Add trustline'}
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => onClaim(t)}
-                        disabled={claimingSac !== null}
-                        className="h-10 px-4 rounded-full bg-primary-container text-on-primary font-semibold text-sm disabled:opacity-60"
-                      >
-                        {claimingSac === t.sac ? 'Claiming…' : 'Claim'}
-                      </button>
-                    )}
-                  </div>
-                ))}
+                  )
+                })}
                 <button
                   onClick={() => navigate('/offramp')}
                   className="mt-2 text-primary-container font-semibold text-sm flex items-center justify-center gap-1"

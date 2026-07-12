@@ -31,7 +31,14 @@ export interface TokenInfo {
   /** Present when this token represents a real-world asset (Phase 1: a
    *  testnet-issued, clawback-enabled Stellar asset standing in for a title).
    *  Drives the RWA badge + attested value in the vault UI. */
-  rwa?: { label: string; attestedPhp: number; docRef: string }
+  rwa?: {
+    label: string
+    attestedPhp: number
+    docRef: string
+    /** AUTH_REQUIRED asset — an heir must clear the (demo) KYC approval before
+     *  they can claim it. Drives the compliance gate on the claim page. */
+    gated?: boolean
+  }
 }
 
 /** RWA title issued in Phase 1 (see docs/RWA_PHASES.md + scripts/rwa). A
@@ -39,6 +46,10 @@ export interface TokenInfo {
  *  it inherits the dead-man's-switch + claim flow. Attested value is still a
  *  fixed demo figure — an on-chain valuation oracle is Phase 2. */
 export const RWA_HOUSE_SAC = 'CAXFGZMPWQMZBCIV6KO5K4YBYKZQN57BWD62Q2WTHHNVZ4UO7I6OQJWT'
+
+/** Phase 3 gated title — AUTH_REQUIRED, so an heir must pass the (demo) KYC
+ *  approval before they can claim it. See docs/RWA_PHASES.md + api/kyc. */
+export const RWA_HOUSE_GATED_SAC = 'CDPJ2C55GRIZDS67FG7D3SPZT7ND6STKLPDNCD2HQU6EUZRG3WA36UJT'
 
 export const KNOWN_TOKENS: TokenInfo[] = [
   { symbol: 'XLM', sac: NATIVE_SAC, decimals: 7 },
@@ -50,6 +61,17 @@ export const KNOWN_TOKENS: TokenInfo[] = [
       label: 'Tokenized title',
       attestedPhp: 2_400_000,
       docRef: 'testnet — not legally binding',
+    },
+  },
+  {
+    symbol: 'HOUSE02',
+    sac: RWA_HOUSE_GATED_SAC,
+    decimals: 7,
+    rwa: {
+      label: 'Tokenized title · KYC-gated',
+      attestedPhp: 3_800_000,
+      docRef: 'testnet — KYC-gated, not legally binding',
+      gated: true,
     },
   },
 ]
