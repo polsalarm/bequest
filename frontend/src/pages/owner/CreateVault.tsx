@@ -115,7 +115,7 @@ export function CreateVault() {
 
         <button
           onClick={onCreate}
-          className="w-full h-14 rounded-full bg-primary-container text-on-primary font-semibold uppercase tracking-wider flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.98] transition card-shadow"
+          className="w-full h-14 rounded-xl bg-primary-container text-on-primary font-semibold uppercase tracking-wider flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.98] transition card-shadow"
         >
           Create My Vault
           <Icon name="add_home" fill />

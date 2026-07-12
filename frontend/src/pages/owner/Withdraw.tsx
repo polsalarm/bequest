@@ -106,7 +106,7 @@ export function Withdraw() {
                         setSac(t.sac)
                         setAmount('')
                       }}
-                      className={`px-4 h-11 rounded-full font-semibold border transition ${
+                      className={`px-4 h-11 rounded-xl font-semibold border transition ${
                         active
                           ? 'bg-primary-container text-on-primary border-primary-container'
                           : 'bg-surface border-outline-variant/40'
@@ -150,7 +150,7 @@ export function Withdraw() {
             <button
               onClick={onWithdraw}
               disabled={!valid}
-              className="w-full h-14 rounded-full bg-primary-container text-on-primary font-semibold uppercase tracking-wider flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.98] transition disabled:opacity-60 card-shadow"
+              className="w-full h-14 rounded-xl bg-primary-container text-on-primary font-semibold uppercase tracking-wider flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.98] transition disabled:opacity-60 card-shadow"
             >
               Withdraw
               <Icon name="arrow_upward" />

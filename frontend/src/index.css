@@ -1,38 +1,79 @@
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
 
-/* Pamana "Heritage Protocol" design system — from the Stitch project. */
+/* Bequest design system — navy/blue/orange, light + dark. */
 @theme {
-  --color-surface: #faf9f6;
+  --color-surface: #f5f6f8;
   --color-surface-container-lowest: #ffffff;
-  --color-surface-container-low: #f4f3f1;
-  --color-surface-container: #efeeeb;
-  --color-surface-container-high: #e9e8e5;
-  --color-surface-variant: #e3e2e0;
-  --color-surface-dim: #dbdad7;
+  --color-surface-container-low: #f5f6f8;
+  --color-surface-container: #eef1f6;
+  --color-surface-container-high: #e3e8f0;
+  --color-surface-variant: #dce3ed;
+  --color-surface-dim: #c9d3e0;
 
-  --color-on-surface: #1a1c1a;
-  --color-on-surface-variant: #404944;
-  --color-outline: #707974;
-  --color-outline-variant: #bfc9c3;
-  --color-inverse-surface: #2f312f;
+  --color-on-surface: #0b1324;
+  --color-on-surface-variant: #4a5568;
+  --color-outline: #94a3b8;
+  --color-outline-variant: #cbd5e1;
+  --color-inverse-surface: #0b1324;
 
-  --color-primary: #003527;
-  --color-primary-container: #064e3b;
+  /* Primary Blue — brand spec */
+  --color-primary: #2563eb;
+  --color-primary-container: #2563eb;
   --color-on-primary: #ffffff;
-  --color-on-primary-container: #80bea6;
-  --color-primary-fixed: #b0f0d6;
-  --color-primary-fixed-dim: #95d3ba;
+  --color-on-primary-container: #ffffff;
+  /* Soft Blue accent — brand spec */
+  --color-primary-fixed: #bfdbfe;
+  --color-primary-fixed-dim: #93c5fd;
 
-  --color-secondary: #855300;
-  --color-secondary-container: #fea619;
-  --color-on-secondary-container: #684000;
-  --color-amber: #f59e0b;
+  /* Warning accent (Orange) — brand spec */
+  --color-secondary: #f97316;
+  --color-secondary-container: #f97316;
+  --color-on-secondary-container: #ffffff;
+  --color-amber: #f97316;
 
   --color-error: #ba1a1a;
   --color-error-container: #ffdad6;
 
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --radius-2xl: 24px;
+
+  /* Radius scale — brand spec: button/input 12px, card 16px, modal 20px.
+     (Tailwind defaults already give xl=12px and 2xl=16px, so they are left
+     alone; overriding --radius-2xl would break the card spec.) */
+  --radius-modal: 20px;
+}
+
+/* Dark dashboard — built on the spec's Dark Navy #0F172A. */
+.dark {
+  --color-surface: #0f172a;
+  --color-surface-container-lowest: #16213c;
+  --color-surface-container-low: #1c2949;
+  --color-surface-container: #223156;
+  --color-surface-container-high: #293a64;
+  --color-surface-variant: #334768;
+  --color-surface-dim: #0a101f;
+
+  --color-on-surface: #f8fafc;
+  --color-on-surface-variant: #a7b6cf;
+  --color-outline: #46557a;
+  --color-outline-variant: #2d3d5e;
+  --color-inverse-surface: #f8fafc;
+
+  /* Lifted for contrast on navy; the container stays the brand Primary Blue. */
+  --color-primary: #60a5fa;
+  --color-primary-container: #2563eb;
+  --color-on-primary: #ffffff;
+  --color-on-primary-container: #ffffff;
+  --color-primary-fixed: #bfdbfe;
+  --color-primary-fixed-dim: #93c5fd;
+
+  --color-secondary: #fb923c;
+  --color-secondary-container: #f97316;
+  --color-on-secondary-container: #ffffff;
+  --color-amber: #fb923c;
+
+  --color-error: #ff6b6b;
+  --color-error-container: #4a1616;
 }
 
 body {
@@ -50,27 +91,42 @@ body {
   font-variation-settings: "FILL" 1, "wght" 400, "GRAD" 0, "opsz" 24;
 }
 
-/* Pulsing heartbeat glow on the status light. */
+/* Pulsing heartbeat glow on the status light. Primary Blue #2563EB. */
 .status-glow {
   animation: pulse-glow 2s infinite;
 }
 @keyframes pulse-glow {
-  0% { box-shadow: 0 0 0 0 rgba(6, 78, 59, 0.4); }
-  70% { box-shadow: 0 0 0 12px rgba(6, 78, 59, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(6, 78, 59, 0); }
+  0% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4); }
+  70% { box-shadow: 0 0 0 12px rgba(37, 99, 235, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); }
 }
-/* Amber variant for the "inheritance unlocked" state. */
+/* Orange variant for the "inheritance unlocked" state. Orange #F97316. */
 .status-glow-amber {
   animation: pulse-glow-amber 2s infinite;
 }
 @keyframes pulse-glow-amber {
-  0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.45); }
-  70% { box-shadow: 0 0 0 12px rgba(245, 158, 11, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+  0% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.45); }
+  70% { box-shadow: 0 0 0 12px rgba(249, 115, 22, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0); }
 }
 
+/* Card elevation — brand spec. */
 .card-shadow {
-  box-shadow: 0 10px 30px rgba(6, 78, 59, 0.05);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+}
+
+/* Floating elements (raised nav button, FAB) — brand spec. */
+.float-shadow {
+  box-shadow: 0 12px 40px rgba(37, 99, 235, 0.18);
+}
+
+/* Visible focus state on every interactive element (a11y: spec requires one).
+   focus-visible so pointer users don't see a ring on click.
+   !important is deliberate: inputs carry Tailwind's `outline-none` utility,
+   whose class specificity would otherwise suppress the focus ring entirely. */
+:is(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-primary) !important;
+  outline-offset: 2px !important;
 }
 
 /* Modal / toast entrance animations. */

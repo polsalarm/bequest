@@ -68,7 +68,7 @@ export function notify(subscriber: string, title: string, body: string): void {
 /** Guards a reminder so it fires once per `key` (e.g. vaultId + heartbeat,
  *  so it re-arms after the next check-in) rather than on every poll tick. */
 export function notifyOnce(key: string, run: () => void): void {
-  const flag = `pamana:notified:${key}`
+  const flag = `bequest:notified:${key}`
   if (localStorage.getItem(flag)) return
   localStorage.setItem(flag, '1')
   run()

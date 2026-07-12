@@ -12,7 +12,7 @@ import logo from '../assets/logo.svg'
 
 type CardStatus = 'blank' | 'writing' | 'done'
 
-const programmedKey = (addr: string) => `pamana.cardProgrammed.${addr}`
+const programmedKey = (addr: string) => `bequest.cardProgrammed.${addr}`
 
 /** NFC tap-to-claim cards: program a blank tag with your address so a
  *  non-crypto heir can tap to claim. The card starts blank and "fills in" into
@@ -96,25 +96,38 @@ export function Nfc() {
         {status === 'done' ? (
           <div className="animate-[cardReveal_700ms_cubic-bezier(0.2,0.8,0.2,1)_both]">
             <TiltCard
-              cardClassName="w-full aspect-[1.586/1] bg-primary-container text-on-primary"
+              cardClassName="w-full aspect-[1.586/1] bg-[#0b1324] text-white overflow-hidden"
               className="w-full"
               radius="20px"
-              behindGlowColor="rgba(16, 185, 129, 0.35)"
+              behindGlowColor="rgba(30, 91, 255, 0.4)"
               behindGlowSize="60%"
             >
-              <div className="relative h-full p-5 flex flex-col justify-between">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <img src={logo} alt="" className="w-7 h-7" />
-                    <span className="font-bold tracking-wide">Pamana</span>
+              <div className="relative h-full">
+                {/* road-glow brand graphic */}
+                <div className="absolute right-9 top-1/2 -translate-y-1/2 w-14 h-14 rounded-full bg-white/90 blur-md pointer-events-none" />
+                <div className="absolute right-6 top-1/2 -translate-y-1/2 w-32 h-32 rounded-full bg-white/15 blur-2xl pointer-events-none" />
+                <div className="absolute -right-6 -bottom-6 w-44 h-28 bg-gradient-to-tr from-secondary via-primary to-transparent opacity-70 blur-2xl rotate-[-12deg] pointer-events-none" />
+
+                <div className="relative h-full p-5 flex flex-col justify-between">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-2">
+                      <img src={logo} alt="" className="w-7 h-7" />
+                      <div>
+                        <div className="font-bold tracking-wide leading-none">Bequest</div>
+                        <div className="text-[9px] leading-none mt-1">
+                          <span className="text-white/70">Your legacy. </span>
+                          <span className="text-secondary">Their future.</span>
+                        </div>
+                      </div>
+                    </div>
+                    <Icon name="contactless" className="text-3xl text-white/90" />
                   </div>
-                  <Icon name="contactless" className="text-3xl text-primary-fixed" />
-                </div>
-                <div>
-                  <div className="text-[10px] uppercase tracking-wider text-primary-fixed-dim">
-                    Tap to claim
+                  <div>
+                    <div className="text-[10px] uppercase tracking-wider text-primary-fixed-dim">
+                      Tap to claim
+                    </div>
+                    <div className="font-mono text-lg mt-0.5">{shortAddr(address, 6)}</div>
                   </div>
-                  <div className="font-mono text-lg mt-0.5">{shortAddr(address, 6)}</div>
                 </div>
               </div>
             </TiltCard>
@@ -151,7 +164,7 @@ export function Nfc() {
         {status === 'done' && (
           <button
             onClick={reprogram}
-            className="w-full h-12 rounded-full border border-primary-container/40 text-primary-container font-semibold flex items-center justify-center gap-2"
+            className="w-full h-12 rounded-xl border border-primary-container/40 text-primary-container font-semibold flex items-center justify-center gap-2"
           >
             <Icon name="refresh" />
             Program another card
@@ -163,7 +176,7 @@ export function Nfc() {
           <button
             onClick={tapToClaim}
             disabled={reading}
-            className="w-full h-12 rounded-full border border-outline-variant/50 text-on-surface font-semibold flex items-center justify-center gap-2 disabled:opacity-60"
+            className="w-full h-12 rounded-xl border border-outline-variant/50 text-on-surface font-semibold flex items-center justify-center gap-2 disabled:opacity-60"
           >
             <Icon name="contactless" />
             {reading ? 'Tap the card…' : 'Tap a card to claim'}
@@ -175,7 +188,7 @@ export function Nfc() {
             <Icon name="info" className="text-primary-container" />
             <p>
               Web NFC works on <strong>Android Chrome</strong>. On this device,
-              share the claim link below — or open Pamana on an Android phone to
+              share the claim link below — or open Bequest on an Android phone to
               program a real card.
             </p>
           </div>

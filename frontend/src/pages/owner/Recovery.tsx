@@ -174,7 +174,7 @@ export function Recovery() {
             {unsafe && (
               <button
                 onClick={onEnforce}
-                className="h-12 rounded-full bg-primary-container text-on-primary font-semibold uppercase tracking-wider text-sm card-shadow"
+                className="h-12 rounded-xl bg-primary-container text-on-primary font-semibold uppercase tracking-wider text-sm card-shadow"
               >
                 Require {threshold} of {guardians.length} signatures
               </button>
@@ -213,7 +213,7 @@ export function Recovery() {
                 </div>
                 <button
                   onClick={() => onRemove(g.key)}
-                  className="w-9 h-9 rounded-lg text-error hover:bg-error-container/40 flex items-center justify-center"
+                  className="w-11 h-11 rounded-xl text-error hover:bg-error-container/40 flex items-center justify-center"
                 >
                   <Icon name="delete" />
                 </button>
@@ -230,12 +230,12 @@ export function Recovery() {
             value={guardian}
             onChange={(e) => setGuardian(e.target.value)}
             placeholder="Guardian Stellar address (G…)"
-            className="bg-surface-container-low rounded-lg px-3 py-3 text-sm outline-none"
+            className="bg-surface-container-low rounded-xl px-3 py-3 text-sm outline-none"
           />
           <button
             onClick={onAdd}
             disabled={!isStellarAddr(guardian)}
-            className="h-12 rounded-full bg-primary-container text-on-primary font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
+            className="h-12 rounded-xl bg-primary-container text-on-primary font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
           >
             Add Guardian
             <Icon name="add" />

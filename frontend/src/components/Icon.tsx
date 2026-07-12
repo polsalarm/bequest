@@ -13,6 +13,8 @@ const demoIcon: Record<string, string> = {
   check_circle: '✓',
   close: '×',
   contactless: 'NFC',
+  dark_mode: '☾',
+  light_mode: '☼',
   favorite: '♥',
   group_add: '+',
   history: '↺',

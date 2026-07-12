@@ -103,13 +103,13 @@ export function ManageHeirs() {
                     value={r.addr}
                     onChange={(e) => update(i, { addr: e.target.value })}
                     placeholder="Heir Stellar address (G…)"
-                    className={`flex-grow bg-surface-container-low rounded-lg px-3 py-2 text-sm outline-none border ${
+                    className={`flex-grow bg-surface-container-low rounded-xl px-3 py-2 text-sm outline-none border ${
                       badAddr ? 'border-error' : 'border-transparent'
                     }`}
                   />
                   <button
                     onClick={() => removeRow(i)}
-                    className="w-9 h-9 rounded-lg text-on-surface-variant hover:bg-surface-container flex items-center justify-center flex-shrink-0"
+                    className="w-11 h-11 rounded-xl text-on-surface-variant hover:bg-surface-container flex items-center justify-center flex-shrink-0"
                   >
                     <Icon name="close" />
                   </button>
@@ -121,7 +121,7 @@ export function ManageHeirs() {
                     value={r.pct}
                     onChange={(e) => update(i, { pct: e.target.value })}
                     placeholder="0"
-                    className="w-24 bg-surface-container-low rounded-lg px-3 py-2 text-sm outline-none"
+                    className="w-24 bg-surface-container-low rounded-xl px-3 py-2 text-sm outline-none"
                   />
                   <span className="text-on-surface-variant text-sm">% share</span>
                 </div>
@@ -150,7 +150,7 @@ export function ManageHeirs() {
             <button
               onClick={onSave}
               disabled={!canSave}
-              className="w-full h-14 rounded-full bg-primary-container text-on-primary font-semibold uppercase tracking-wider flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.98] transition disabled:opacity-50 card-shadow"
+              className="w-full h-14 rounded-xl bg-primary-container text-on-primary font-semibold uppercase tracking-wider flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.98] transition disabled:opacity-50 card-shadow"
             >
               Save Heirs
               <Icon name="check" />
@@ -169,7 +169,7 @@ export function ManageHeirs() {
                 </p>
                 <button
                   onClick={() => navigate('/create')}
-                  className="bg-primary-container text-on-primary h-12 px-6 rounded-full font-semibold uppercase tracking-wider hover:opacity-90 active:scale-95 transition card-shadow"
+                  className="bg-primary-container text-on-primary h-12 px-6 rounded-xl font-semibold uppercase tracking-wider hover:opacity-90 active:scale-95 transition card-shadow"
                 >
                   Create My Vault
                 </button>

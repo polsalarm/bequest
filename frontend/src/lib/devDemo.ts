@@ -9,10 +9,10 @@ export const DEMO_USDC_SAC = 'CBIELGZLHDNXXFZAJFY75R7O2YQRKWKZC2QHTCNZUZ5CZFXNDE
 export function demoCaptureEnabled(): boolean {
   if (!import.meta.env.DEV || typeof window === 'undefined') return false
   if (window.location.search.includes('demoCapture=1')) {
-    localStorage.setItem('pamana.demoCapture', '1')
+    localStorage.setItem('bequest.demoCapture', '1')
     return true
   }
-  return localStorage.getItem('pamana.demoCapture') === '1'
+  return localStorage.getItem('bequest.demoCapture') === '1'
 }
 
 export const demoHeirs: Heir[] = [

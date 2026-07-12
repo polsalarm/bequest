@@ -150,13 +150,13 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
             <div className="flex gap-3 mt-1">
               <button
                 onClick={() => settle({ ok: false, cancelled: true })}
-                className="flex-1 h-12 rounded-full border border-outline-variant/60 font-semibold text-on-surface-variant"
+                className="flex-1 h-12 rounded-xl border border-outline-variant/60 font-semibold text-on-surface-variant"
               >
                 Cancel
               </button>
               <button
                 onClick={() => void execute()}
-                className={`flex-1 h-12 rounded-full font-semibold text-on-primary ${
+                className={`flex-1 h-12 rounded-xl font-semibold text-on-primary ${
                   opts.confirm.tone === 'danger'
                     ? 'bg-error'
                     : 'bg-primary-container'
@@ -222,14 +222,14 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
                     opts.onAction?.()
                     settle({ ok: true, result: resultRef.current })
                   }}
-                  className="w-full h-12 rounded-full bg-primary-container text-on-primary font-semibold"
+                  className="w-full h-12 rounded-xl bg-primary-container text-on-primary font-semibold"
                 >
                   {opts.actionLabel}
                 </button>
               )}
               <button
                 onClick={() => settle({ ok: true, result: resultRef.current })}
-                className={`w-full h-12 rounded-full font-semibold ${
+                className={`w-full h-12 rounded-xl font-semibold ${
                   opts?.actionLabel
                     ? 'text-on-surface-variant'
                     : 'bg-primary-container text-on-primary'
@@ -253,13 +253,13 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
             <div className="w-full flex gap-3 mt-2">
               <button
                 onClick={() => settle({ ok: false, error: new Error(state.error) })}
-                className="flex-1 h-12 rounded-full border border-outline-variant/60 font-semibold text-on-surface-variant"
+                className="flex-1 h-12 rounded-xl border border-outline-variant/60 font-semibold text-on-surface-variant"
               >
                 Close
               </button>
               <button
                 onClick={() => void execute()}
-                className="flex-1 h-12 rounded-full bg-primary-container text-on-primary font-semibold"
+                className="flex-1 h-12 rounded-xl bg-primary-container text-on-primary font-semibold"
               >
                 Retry
               </button>

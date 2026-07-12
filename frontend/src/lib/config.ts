@@ -76,7 +76,7 @@ export const KNOWN_TOKENS: TokenInfo[] = [
   },
 ]
 
-const USER_TOKENS_KEY = 'pamana.userTokens'
+const USER_TOKENS_KEY = 'bequest.userTokens'
 
 /** Tokens the user added themselves (persisted in localStorage). */
 export function getUserTokens(): TokenInfo[] {

@@ -7,7 +7,7 @@ import logo from '../../assets/logo.svg'
 const steps = [
   { icon: 'lock', title: 'Create vault', body: 'Secure your assets in a personal on-chain vault on Stellar.' },
   { icon: 'group_add', title: 'Add heirs', body: 'Designate family and assign each a clear inheritance share.' },
-  { icon: 'favorite', title: 'Stay alive', body: 'Check in periodically to prove vitality. Pamana handles the rest.' },
+  { icon: 'favorite', title: 'Stay alive', body: 'Check in periodically to prove vitality. Bequest handles the rest.' },
 ]
 
 export function Landing() {
@@ -24,15 +24,19 @@ export function Landing() {
       <main className="relative z-10 max-w-[600px] mx-auto min-h-dvh flex flex-col px-5 pt-10 pb-8">
         <header className="flex flex-col items-center pt-6 pb-6">
           <div className="relative w-24 h-24 flex items-center justify-center mb-2">
-            <img src={logo} alt="Pamana" className="w-24 h-24 relative z-10" />
+            <img src={logo} alt="Bequest" className="w-24 h-24 relative z-10" />
             <div className="absolute inset-0 border-2 border-primary-container/10 rounded-full animate-ping [animation-duration:3s]" />
           </div>
-          <h1 className="text-2xl font-bold text-primary tracking-tight">Pamana</h1>
+          <h1 className="text-2xl font-bold text-primary tracking-tight">Bequest</h1>
+          <p className="text-xs font-medium tracking-wide mt-0.5">
+            <span className="text-on-surface-variant">Your legacy. </span>
+            <span className="text-secondary">Their future.</span>
+          </p>
         </header>
 
         <section className="flex flex-col items-center text-center flex-grow justify-center mb-8">
           <h2 className="text-4xl font-bold leading-tight mb-3">
-            Your pamana moves on its own.
+            Your bequest moves on its own.
           </h2>
           <p className="text-lg text-on-surface-variant max-w-sm mb-8">
             A self-executing legacy vault that cares for your family — with no
@@ -41,7 +45,7 @@ export function Landing() {
           <button
             onClick={connect}
             disabled={connecting}
-            className="w-full max-w-sm bg-primary-container text-on-primary h-14 rounded-full font-semibold uppercase tracking-wider hover:opacity-90 active:scale-[0.98] transition disabled:opacity-60 flex items-center justify-center gap-2 card-shadow"
+            className="w-full max-w-sm bg-primary-container text-on-primary h-14 rounded-xl font-semibold uppercase tracking-wider hover:opacity-90 active:scale-[0.98] transition disabled:opacity-60 flex items-center justify-center gap-2 card-shadow"
           >
             {connecting ? 'Connecting…' : 'Connect Wallet'}
             <Icon name="wallet" fill />

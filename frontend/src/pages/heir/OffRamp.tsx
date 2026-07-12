@@ -225,7 +225,7 @@ export function OffRamp() {
 
           <button
             onClick={() => navigate('/dashboard')}
-            className="w-full h-14 rounded-full bg-primary-container text-on-primary font-semibold uppercase tracking-wider card-shadow"
+            className="w-full h-14 rounded-xl bg-primary-container text-on-primary font-semibold uppercase tracking-wider card-shadow"
           >
             Done
           </button>
@@ -369,7 +369,7 @@ export function OffRamp() {
         <button
           onClick={onWithdraw}
           disabled={!canSubmit}
-          className="w-full h-14 rounded-full bg-primary-container text-on-primary font-semibold uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-50 card-shadow"
+          className="w-full h-14 rounded-xl bg-primary-container text-on-primary font-semibold uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-50 card-shadow"
         >
           Withdraw ₱{total.toLocaleString()}
           <Icon name="south" />

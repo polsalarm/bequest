@@ -53,7 +53,7 @@ export async function readClaimCard(): Promise<string> {
     reader.onreading = (e) => {
       const owner = ownerFromRecords(e.message.records)
       if (owner) resolve(owner)
-      else reject(new Error('No Pamana address found on this card.'))
+      else reject(new Error('No Bequest address found on this card.'))
     }
   })
 }

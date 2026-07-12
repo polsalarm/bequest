@@ -134,7 +134,7 @@ export function CashIn() {
               href={result.checkoutUrl}
               target="_blank"
               rel="noreferrer"
-              className="w-full h-14 rounded-full bg-primary-container text-on-primary font-semibold uppercase tracking-wider flex items-center justify-center gap-2 card-shadow"
+              className="w-full h-14 rounded-xl bg-primary-container text-on-primary font-semibold uppercase tracking-wider flex items-center justify-center gap-2 card-shadow"
             >
               Open payment page <Icon name="open_in_new" />
             </a>
@@ -231,7 +231,7 @@ export function CashIn() {
         <button
           onClick={onCashIn}
           disabled={!valid}
-          className="w-full h-14 rounded-full bg-primary-container text-on-primary font-semibold uppercase tracking-wider flex items-center justify-center gap-2 card-shadow disabled:opacity-50"
+          className="w-full h-14 rounded-xl bg-primary-container text-on-primary font-semibold uppercase tracking-wider flex items-center justify-center gap-2 card-shadow disabled:opacity-50"
         >
           Cash in {valid ? `₱${php.toLocaleString()}` : ''}
           <Icon name="account_balance" />

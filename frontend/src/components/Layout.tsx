@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { NavLink } from 'react-router-dom'
 import { Icon } from './Icon'
 import { useWallet } from '../contexts/WalletContext'
+import { useTheme } from '../contexts/ThemeContext'
 import { shortAddr } from '../lib/config'
 import logo from '../assets/logo.svg'
 
@@ -15,26 +16,36 @@ const navItems = [
 
 export function Layout({ children }: { children: ReactNode }) {
   const { address, disconnect } = useWallet()
+  const { theme, toggle } = useTheme()
 
   return (
     <div className="min-h-dvh bg-surface text-on-surface pb-[92px]">
       <header className="sticky top-0 z-40 bg-surface/90 backdrop-blur border-b border-outline-variant/20">
         <div className="max-w-[600px] mx-auto flex justify-between items-center px-5 h-16">
           <div className="flex items-center gap-2">
-            <img src={logo} alt="Pamana" className="w-8 h-8" />
-            <h1 className="text-xl font-bold text-primary">Pamana</h1>
+            <img src={logo} alt="Bequest" className="w-8 h-8" />
+            <h1 className="text-xl font-bold text-primary">Bequest</h1>
           </div>
-          {address && (
+          <div className="flex items-center gap-2">
             <button
-              onClick={disconnect}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-secondary-container/60 bg-surface-container-low card-shadow"
+              onClick={toggle}
+              aria-label="Toggle theme"
+              className="w-11 h-11 rounded-full flex items-center justify-center text-on-surface-variant bg-surface-container-low card-shadow"
             >
-              <span className="w-2 h-2 rounded-full bg-secondary-container" />
-              <span className="text-xs font-medium text-on-surface-variant">
-                {shortAddr(address)}
-              </span>
+              <Icon name={theme === 'dark' ? 'light_mode' : 'dark_mode'} className="text-lg" />
             </button>
-          )}
+            {address && (
+              <button
+                onClick={disconnect}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-secondary-container/60 bg-surface-container-low card-shadow"
+              >
+                <span className="w-2 h-2 rounded-full bg-secondary-container" />
+                <span className="text-xs font-medium text-on-surface-variant">
+                  {shortAddr(address)}
+                </span>
+              </button>
+            )}
+          </div>
         </div>
       </header>
 
@@ -42,7 +53,7 @@ export function Layout({ children }: { children: ReactNode }) {
         {children}
       </main>
 
-      <nav className="fixed bottom-0 inset-x-0 z-40 bg-surface border-t border-outline-variant/20 shadow-[0_-10px_30px_rgba(6,78,59,0.05)]">
+      <nav className="fixed bottom-0 inset-x-0 z-40 bg-surface border-t border-outline-variant/20 shadow-[0_-10px_30px_rgba(11,19,36,0.08)]">
         <div className="max-w-[600px] mx-auto flex justify-around items-end px-2 py-2">
           {navItems.map((n) =>
             n.highlight ? (
@@ -51,7 +62,7 @@ export function Layout({ children }: { children: ReactNode }) {
                 {({ isActive }) => (
                   <>
                     <span
-                      className={`w-14 h-14 rounded-full flex items-center justify-center card-shadow ring-4 ring-surface transition-transform active:scale-95 ${
+                      className={`w-14 h-14 rounded-full flex items-center justify-center float-shadow ring-4 ring-surface transition-transform active:scale-95 ${
                         isActive
                           ? 'bg-primary text-on-primary'
                           : 'bg-primary-container text-on-primary'

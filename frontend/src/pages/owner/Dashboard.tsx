@@ -40,7 +40,7 @@ export function Dashboard() {
         />
       </div>
 
-      {/* The vault — Pamana's core feature. */}
+      {/* The vault — Bequest's core feature. */}
       <VaultPanel />
 
       {/* Recent on-chain activity. */}

@@ -299,12 +299,12 @@ export function Claim() {
             value={owner}
             onChange={(e) => setOwner(e.target.value)}
             placeholder="Owner Stellar address (G…)"
-            className="flex-grow bg-surface-container-low rounded-lg px-3 py-3 text-sm outline-none"
+            className="flex-grow bg-surface-container-low rounded-xl px-3 py-3 text-sm outline-none"
           />
           <button
             onClick={() => lookup()}
             disabled={!isStellarAddr(owner) || loading}
-            className="px-4 rounded-lg bg-primary-container text-on-primary font-semibold disabled:opacity-50"
+            className="px-4 rounded-xl bg-primary-container text-on-primary font-semibold disabled:opacity-50"
           >
             {loading ? '…' : 'Find'}
           </button>
@@ -314,7 +314,7 @@ export function Claim() {
           <button
             onClick={onScan}
             disabled={scanning}
-            className="w-full h-12 rounded-full border border-primary-container/40 text-primary-container font-semibold flex items-center justify-center gap-2 disabled:opacity-60"
+            className="w-full h-12 rounded-xl border border-primary-container/40 text-primary-container font-semibold flex items-center justify-center gap-2 disabled:opacity-60"
           >
             <Icon name="contactless" />
             {scanning ? 'Tap your card…' : 'Tap NFC claim card'}
@@ -377,7 +377,7 @@ export function Claim() {
                           <button
                             onClick={() => onTrust(t)}
                             disabled={claimingSac !== null}
-                            className="h-10 px-4 rounded-full border border-primary-container/50 text-primary-container font-semibold text-sm disabled:opacity-60 flex items-center gap-1"
+                            className="h-11 px-4 rounded-xl border border-primary-container/50 text-primary-container font-semibold text-sm disabled:opacity-60 flex items-center gap-1"
                             title="Add a trustline so your wallet can hold this asset"
                           >
                             {claimingSac === t.sac ? 'Adding…' : 'Add trustline'}
@@ -386,7 +386,7 @@ export function Claim() {
                           <button
                             onClick={() => onKyc(t)}
                             disabled={kycSac !== null}
-                            className="h-10 px-4 rounded-full border border-secondary-container/50 text-secondary-container font-semibold text-sm disabled:opacity-60"
+                            className="h-11 px-4 rounded-xl border border-secondary-container/50 text-secondary-container font-semibold text-sm disabled:opacity-60"
                             title="This title requires compliance approval before it can be claimed"
                           >
                             {kycSac === t.sac ? 'Checking…' : 'Complete KYC'}
@@ -395,7 +395,7 @@ export function Claim() {
                           <button
                             onClick={() => onClaim(t)}
                             disabled={claimingSac !== null}
-                            className="h-10 px-4 rounded-full bg-primary-container text-on-primary font-semibold text-sm disabled:opacity-60"
+                            className="h-11 px-4 rounded-xl bg-primary-container text-on-primary font-semibold text-sm disabled:opacity-60"
                           >
                             {claimingSac === t.sac ? 'Claiming…' : 'Claim'}
                           </button>

@@ -114,7 +114,7 @@ export function VaultPanel() {
         </p>
         <button
           onClick={() => navigate('/create')}
-          className="bg-primary-container text-on-primary h-14 px-8 rounded-full font-semibold uppercase tracking-wider hover:opacity-90 active:scale-95 transition card-shadow"
+          className="bg-primary-container text-on-primary h-14 px-8 rounded-xl font-semibold uppercase tracking-wider hover:opacity-90 active:scale-95 transition card-shadow"
         >
           Create My Vault
         </button>
@@ -136,7 +136,7 @@ export function VaultPanel() {
         </p>
         <button
           onClick={onCheckIn}
-          className="w-full h-14 rounded-lg bg-primary-container text-on-primary font-semibold uppercase tracking-wider flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition"
+          className="w-full h-14 rounded-xl bg-primary-container text-on-primary font-semibold uppercase tracking-wider flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition"
         >
           <Icon name="favorite" />
           I'm Alive
@@ -157,7 +157,7 @@ export function VaultPanel() {
       <section className="bg-surface-container-lowest rounded-2xl p-6 card-shadow border border-outline-variant/30">
         <div className="flex justify-between items-center">
           <span className="text-xs uppercase tracking-wider text-on-surface-variant">
-            Pamana Vault
+            Bequest Vault
           </span>
           <span className="text-xs text-on-surface-variant">{shortAddr(vault.vaultId, 6)}</span>
         </div>
