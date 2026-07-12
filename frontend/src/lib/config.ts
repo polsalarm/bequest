@@ -51,6 +51,10 @@ export const RWA_HOUSE_SAC = 'CAXFGZMPWQMZBCIV6KO5K4YBYKZQN57BWD62Q2WTHHNVZ4UO7I
  *  approval before they can claim it. See docs/RWA_PHASES.md + api/kyc. */
 export const RWA_HOUSE_GATED_SAC = 'CDPJ2C55GRIZDS67FG7D3SPZT7ND6STKLPDNCD2HQU6EUZRG3WA36UJT'
 
+/** HOUSE03 — a second Phase 3 gated title, issued via scripts/rwa/issue-house03-gated.sh.
+ *  Deposited into the same shared vault as HOUSE01/HOUSE02 (see docs/rwa/HOUSE03-appraisal.md). */
+export const RWA_HOUSE03_SAC = 'CCYBWWVJF4IUUK3LE6VXO5CT2SEO2IOOAJNKECZ3USTDFJM4UHGPDX7H'
+
 export const KNOWN_TOKENS: TokenInfo[] = [
   { symbol: 'XLM', sac: NATIVE_SAC, decimals: 7 },
   {
@@ -70,6 +74,17 @@ export const KNOWN_TOKENS: TokenInfo[] = [
     rwa: {
       label: 'Tokenized title · KYC-gated',
       attestedPhp: 3_800_000,
+      docRef: 'testnet — KYC-gated, not legally binding',
+      gated: true,
+    },
+  },
+  {
+    symbol: 'HOUSE03',
+    sac: RWA_HOUSE03_SAC,
+    decimals: 7,
+    rwa: {
+      label: 'Tokenized title · KYC-gated',
+      attestedPhp: 2_400_000,
       docRef: 'testnet — KYC-gated, not legally binding',
       gated: true,
     },
