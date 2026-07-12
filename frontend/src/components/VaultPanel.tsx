@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Icon } from './Icon'
 import { StatusLight, statusText } from './StatusLight'
@@ -6,6 +7,7 @@ import { useFeedback } from '../contexts/FeedbackContext'
 import { useVault } from '../lib/hooks/useVault'
 import { checkIn } from '../lib/contract'
 import { shortAddr, tokenBySac } from '../lib/config'
+import { enablePushReminders, pushEnabled, pushSupported, notify, notifyOnce } from '../lib/push'
 
 function daysLeft(heartbeat: bigint, timeout: bigint): number {
   const now = Math.floor(Date.now() / 1000)
@@ -18,8 +20,57 @@ function daysLeft(heartbeat: bigint, timeout: bigint): number {
 export function VaultPanel() {
   const { address } = useWallet()
   const vault = useVault(address)
-  const { runTx } = useFeedback()
+  const { runTx, toast } = useFeedback()
   const navigate = useNavigate()
+  const [pushOn, setPushOn] = useState(false)
+  const [pushBusy, setPushBusy] = useState(false)
+
+  useEffect(() => {
+    pushEnabled().then(setPushOn)
+  }, [])
+
+  // Deadline-aware reminders — polled client-side (useVault refreshes every
+  // 8s) rather than via cron: this app's demo mode uses 30-60s timeouts, far
+  // shorter than Vercel Cron's once-a-day minimum on the free tier, so a
+  // schedule-based check would never fire in time to matter for a demo.
+  useEffect(() => {
+    if (!pushOn || !address || !vault.vaultId || vault.timeout <= 0n) return
+    const now = BigInt(Math.floor(Date.now() / 1000))
+    if (vault.status === 'Alive') {
+      const remaining = vault.heartbeat + vault.timeout - now
+      if (remaining > 0n && remaining <= vault.timeout / 5n) {
+        notifyOnce(`${vault.vaultId}:reminder:${vault.heartbeat}`, () =>
+          notify(
+            address,
+            'Check in soon',
+            'Your inheritance countdown is running low — tap "I\'m Alive" to reset it.',
+          ),
+        )
+      }
+    } else if (vault.status === 'TimedOut') {
+      notifyOnce(`${vault.vaultId}:timedout:${vault.heartbeat}`, () =>
+        notify(
+          address,
+          'Vault timed out',
+          'Your check-in window passed — heirs can now claim their share.',
+        ),
+      )
+    }
+  }, [pushOn, address, vault.vaultId, vault.status, vault.heartbeat, vault.timeout])
+
+  async function onEnableReminders() {
+    if (!address) return
+    setPushBusy(true)
+    try {
+      await enablePushReminders(address)
+      setPushOn(true)
+      toast('Check-in reminders enabled', 'success')
+    } catch (e) {
+      toast(e instanceof Error ? e.message : 'Could not enable reminders', 'error')
+    } finally {
+      setPushBusy(false)
+    }
+  }
 
   async function onCheckIn() {
     if (!vault.vaultId || !address) return
@@ -81,6 +132,16 @@ export function VaultPanel() {
           <Icon name="favorite" />
           I'm Alive
         </button>
+        {pushSupported() && !pushOn && (
+          <button
+            onClick={onEnableReminders}
+            disabled={pushBusy}
+            className="mt-3 text-sm text-primary-container font-medium flex items-center gap-1.5 disabled:opacity-50"
+          >
+            <Icon name="notifications" className="text-base" />
+            {pushBusy ? 'Enabling…' : 'Enable check-in reminders'}
+          </button>
+        )}
       </section>
 
       {/* Vault balances (per token) + quick actions */}

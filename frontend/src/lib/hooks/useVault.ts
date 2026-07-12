@@ -75,5 +75,14 @@ export function useVault(address: string | null) {
     refresh()
   }, [refresh])
 
+  // Keep heartbeat/status live without a manual reload — needed so the
+  // check-in-soon / timed-out push reminders (VaultPanel) actually notice a
+  // deadline approaching while the tab just sits open.
+  useEffect(() => {
+    if (!address) return
+    const id = setInterval(refresh, 8_000)
+    return () => clearInterval(id)
+  }, [address, refresh])
+
   return { ...data, loading, error, refresh }
 }
