@@ -67,6 +67,7 @@ export function Claim() {
   const [error, setError] = useState<string | null>(null)
   const [claimingSac, setClaimingSac] = useState<string | null>(null)
   const [scanning, setScanning] = useState(false)
+  const [manualOpen, setManualOpen] = useState(false)
   const [pushOn, setPushOn] = useState(false)
   const [pushBusy, setPushBusy] = useState(false)
   /** SACs whose (demo) KYC approval has come back approved this session. */
@@ -292,35 +293,68 @@ export function Claim() {
           </button>
           <h2 className="text-2xl font-semibold">Claim an inheritance</h2>
           <p className="text-on-surface-variant mt-1">
-            Enter the address of the person who named you as an heir.
+            {nfcSupported()
+              ? 'Tap the card belonging to the person who named you as their heir, or paste the link they sent you.'
+              : "Tap the card of the person who named you as their heir on this phone — it opens your claim by itself."}
           </p>
         </div>
 
-        <div className="flex gap-2">
-          <input
-            value={owner}
-            onChange={(e) => setOwner(e.target.value)}
-            placeholder="Owner Stellar address (G…)"
-            className="flex-grow bg-surface-container-low rounded-xl px-3 py-3 text-sm outline-none"
-          />
-          <button
-            onClick={() => lookup()}
-            disabled={!isStellarAddr(owner) || loading}
-            className="px-4 rounded-xl bg-primary-container text-on-primary font-semibold disabled:opacity-50"
-          >
-            {loading ? '…' : 'Find'}
-          </button>
-        </div>
-
-        {nfcSupported() && (
+        {/* Hero tap target — the primary way a non-crypto heir gets here,
+            styled to match the physical card branding from the NFC program page. */}
+        {nfcSupported() ? (
           <button
             onClick={onScan}
             disabled={scanning}
-            className="w-full h-12 rounded-xl border border-primary-container/40 text-primary-container font-semibold flex items-center justify-center gap-2 disabled:opacity-60"
+            className="w-full aspect-[1.586/1] rounded-modal border-2 border-dashed border-outline-variant/60 bg-surface-container-low flex flex-col items-center justify-center gap-2 text-on-surface-variant hover:border-primary-container/50 transition disabled:cursor-default"
           >
-            <Icon name="contactless" />
-            {scanning ? 'Tap your card…' : 'Tap NFC claim card'}
+            {scanning ? (
+              <>
+                <span className="relative flex items-center justify-center w-12 h-12">
+                  <span className="absolute w-12 h-12 rounded-full bg-primary-container/20 status-glow" />
+                  <Icon name="contactless" className="text-4xl text-primary-container" />
+                </span>
+                <span className="text-sm font-medium text-on-surface">Reading their card…</span>
+                <span className="text-xs">Hold it to the back of your phone</span>
+              </>
+            ) : (
+              <>
+                <Icon name="contactless" className="text-4xl opacity-70" />
+                <span className="text-sm font-medium text-on-surface">Tap the vault owner's card</span>
+                <span className="text-xs">The one who named you as their heir — or tap here to scan</span>
+              </>
+            )}
           </button>
+        ) : (
+          <div className="w-full aspect-[1.586/1] rounded-modal border-2 border-dashed border-outline-variant/40 bg-surface-container-low flex flex-col items-center justify-center gap-2 text-on-surface-variant">
+            <Icon name="contactless" className="text-4xl opacity-70" />
+            <span className="text-sm font-medium text-on-surface">Hold the vault owner's card to this phone</span>
+          </div>
+        )}
+
+        {!manualOpen ? (
+          <button
+            onClick={() => setManualOpen(true)}
+            className="self-center text-sm text-primary-container font-medium"
+          >
+            Enter address manually
+          </button>
+        ) : (
+          <div className="flex gap-2">
+            <input
+              value={owner}
+              onChange={(e) => setOwner(e.target.value)}
+              placeholder="Owner Stellar address (G…)"
+              className="grow bg-surface-container-low rounded-xl px-3 py-3 text-sm outline-none"
+              autoFocus
+            />
+            <button
+              onClick={() => lookup()}
+              disabled={!isStellarAddr(owner) || loading}
+              className="px-4 rounded-xl bg-primary-container text-on-primary font-semibold disabled:opacity-50"
+            >
+              {loading ? '…' : 'Find'}
+            </button>
+          </div>
         )}
 
         {found && (

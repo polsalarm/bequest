@@ -84,6 +84,12 @@ export function ManageHeirs() {
           </p>
         </div>
 
+        {vault.loading ? (
+          <div className="flex flex-col items-center justify-center py-12 gap-3 text-on-surface-variant">
+            <Icon name="progress_activity" className="animate-spin text-2xl" />
+            <p className="text-sm">Loading your vault…</p>
+          </div>
+        ) : (
         <div className="relative">
           <div
             className={`flex flex-col gap-5 ${
@@ -177,6 +183,7 @@ export function ManageHeirs() {
             </div>
           )}
         </div>
+        )}
 
       </div>
     </Layout>
