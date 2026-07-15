@@ -43,7 +43,7 @@ if (wcProjectId) {
         url: typeof window !== 'undefined' ? window.location.origin : 'https://bequest.app',
         icons: [
           typeof window !== 'undefined'
-            ? `${window.location.origin}/logo.svg`
+            ? `${window.location.origin}/logo.png`
             : '',
         ],
       },

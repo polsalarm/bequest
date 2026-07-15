@@ -3,7 +3,6 @@ import { NavLink } from 'react-router-dom'
 import { Icon } from './Icon'
 import { useWallet } from '../contexts/WalletContext'
 import { shortAddr } from '../lib/config'
-import logo from '../assets/logo.svg'
 
 const navItems = [
   { to: '/dashboard', icon: 'home', label: 'Home' },
@@ -21,7 +20,7 @@ export function Layout({ children }: { children: ReactNode }) {
       <header className="sticky top-0 z-40 bg-surface/90 backdrop-blur border-b border-outline-variant/20">
         <div className="max-w-[600px] mx-auto flex justify-between items-center px-5 h-16">
           <div className="flex items-center gap-2">
-            <img src={logo} alt="Bequest" className="w-8 h-8" />
+            <img src="/logo.png" alt="Bequest" className="w-8 h-8" />
             <h1 className="text-xl font-bold text-primary">Bequest</h1>
           </div>
           {address && (

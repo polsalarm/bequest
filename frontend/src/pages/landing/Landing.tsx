@@ -2,7 +2,6 @@ import { useNavigate } from 'react-router-dom'
 import { useEffect } from 'react'
 import { Icon } from '../../components/Icon'
 import { useWallet } from '../../contexts/WalletContext'
-import logo from '../../assets/logo.svg'
 
 const steps = [
   { icon: 'lock', title: 'Create vault', body: 'Secure your assets in a personal on-chain vault on Stellar.' },
@@ -24,7 +23,7 @@ export function Landing() {
       <main className="relative z-10 max-w-[600px] mx-auto min-h-dvh flex flex-col px-5 pt-10 pb-8">
         <header className="flex flex-col items-center pt-6 pb-6">
           <div className="relative w-24 h-24 flex items-center justify-center mb-2">
-            <img src={logo} alt="Bequest" className="w-24 h-24 relative z-10" />
+            <img src="/logo.png" alt="Bequest" className="w-24 h-24 relative z-10" />
             <div className="absolute inset-0 border-2 border-primary-container/10 rounded-full animate-ping [animation-duration:3s]" />
           </div>
           <h1 className="text-2xl font-bold text-primary tracking-tight">Bequest</h1>
