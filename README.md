@@ -21,7 +21,7 @@
 
 > 🚧 **Status: In active development** — building to July 15, 2026.
 >
-> **▶ Live (Testnet):** https://pamana-sigma.vercel.app · multi-token contracts on Stellar Testnet (factory `CANQJ6N5…`). Demo videos land as phases complete (see [Build Plan](docs/BUILD_PLAN.md)).
+> **▶ Live (Testnet):** https://bequest.online · multi-token contracts on Stellar Testnet (factory `CANQJ6N5…`). Demo videos land as phases complete (see [Build Plan](docs/BUILD_PLAN.md)).
 
 ## 🧩 Problem
 When a Filipino crypto holder dies or becomes incapacitated, their self-custodied assets are lost permanently. There is no seed-phrase recovery, no probate for private keys, no legal mechanism that reaches a wallet the way it freezes a bank account.
@@ -170,7 +170,7 @@ Honest about what's vision vs shipped. Today Bequest holds **any Stellar asset**
 
 | Item | Link |
 |------|------|
-| 🔗 Live App | [pamana-sigma.vercel.app](https://pamana-sigma.vercel.app) |
+| 🔗 Live App | [bequest.online](https://bequest.online) |
 | Demo Video | [Narrated backup video](assets/video/pamana-demo-backup-2026-07-07.mp4) |
 | Pitch Deck | [Pitch deck draft](docs/PITCH_DECK.md) |
 

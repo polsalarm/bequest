@@ -40,7 +40,7 @@ if (wcProjectId) {
       metadata: {
         name: 'Bequest',
         description: 'Trustless on-chain inheritance for Filipino families.',
-        url: typeof window !== 'undefined' ? window.location.origin : 'https://bequest.app',
+        url: typeof window !== 'undefined' ? window.location.origin : 'https://bequest.online',
         icons: [
           typeof window !== 'undefined'
             ? `${window.location.origin}/logo.png`
