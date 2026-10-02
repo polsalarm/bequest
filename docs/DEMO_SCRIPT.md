@@ -1,6 +1,6 @@
 # Pamana — Demo Script
 
-Target runtime **≤ 4 minutes**. Every step is live on Stellar Testnet. Record a backup video in advance (network insurance). Live app: **https://pamana-sigma.vercel.app**.
+Target runtime **≤ 4 minutes**. Every step is live on Stellar Testnet. Record a backup video in advance (network insurance). Live app: **https://bequest.online**.
 
 > Use a **short demo timeout** (e.g. 60s) when creating the demo vault so the "owner goes silent" moment fits on stage — not the 90-day default.
 

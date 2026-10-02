@@ -116,7 +116,7 @@ Use this as the slide source for Canva, Google Slides, or PowerPoint. Keep the d
 - Move from Testnet demo to audited Mainnet pilot.
 
 **Links:**
-- Live app: https://pamana-sigma.vercel.app
+- Live app: https://bequest.online
 - Repo: https://github.com/polsalarm/pamana
 - Submission draft: `docs/SUBMISSION.md`
 - Demo script: `docs/DEMO_SCRIPT.md`

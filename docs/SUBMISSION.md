@@ -4,7 +4,7 @@
 Draft answers for the Rise In × Stellar APAC Hackathon 2026 form. Pulled from `Pamana-Full-Document.md` §2 and updated to what's actually live. Deadline **2026-07-15**.
 
 - **Project:** Pamana — *Your pamana moves on its own.*
-- **Live app:** https://pamana-sigma.vercel.app
+- **Live app:** https://bequest.online
 - **Repo:** https://github.com/polsalarm/pamana
 - **Network:** Stellar Testnet · Factory `CANQJ6N5BNPYY5CZWGRY7QTZKAY7IAIMSI7RPRNJZP564DROBWOG5PQM`
 
@@ -51,7 +51,7 @@ Passkey smart-wallets, PHP on-ramp, RWA asset card, Sentinel monitor, NFC secure
 Paul Henry Dacalan — Project Lead / Developer · Stellar Ambassador PH · FEU Institute of Technology.
 
 ## Links
-- Live app: https://pamana-sigma.vercel.app
+- Live app: https://bequest.online
 - Repo: https://github.com/polsalarm/pamana
 - Factory (Stellar Expert): https://stellar.expert/explorer/testnet/contract/CANQJ6N5BNPYY5CZWGRY7QTZKAY7IAIMSI7RPRNJZP564DROBWOG5PQM
 - Demo video: `assets/video/pamana-demo-backup-2026-07-07.mp4` (local narrated backup; upload and replace with public URL before final submission)
