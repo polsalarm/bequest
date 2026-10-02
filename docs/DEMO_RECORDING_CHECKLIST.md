@@ -5,7 +5,7 @@ Use this to record the Phase 9 backup video. Target length: 3:30 to 4:00.
 ## Recording Setup
 - Record at 1080p or higher.
 - Keep browser zoom at 100%.
-- Use the live app: https://pamana-sigma.vercel.app
+- Use the live app: https://bequest.online
 - Keep Stellar Expert open in a second tab for contract proof.
 - Have Owner and Heir wallets funded on Stellar Testnet.
 - Use a short demo timeout, ideally 60 seconds.

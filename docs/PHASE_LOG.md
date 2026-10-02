@@ -19,7 +19,7 @@ Living record of what changed each phase: contract IDs, deploy links, keys (publ
 | Vault wasm hash | `7fadec9c5c90d8d409f2d2b874f933c39fc8b26f9617d2406eed46799556c423` |
 | Factory wasm hash | `603f70b96596e0ff5293ff1568cbfd7cc4fd68c722849cca8db970d26f782eae` |
 | Tokens | any Stellar asset (SAC/SEP-41); native XLM SAC `CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC` |
-| Live app URL | **https://pamana-sigma.vercel.app** (Vercel, prod) |
+| Live app URL | **https://bequest.online** (Vercel, prod) |
 | WalletConnect project | dedicated Pamana Reown project (id in Vercel env, not repo) |
 | soroban-sdk | 22.x · target `wasm32v1-none` · stellar-cli 25.2.0 |
 
@@ -424,7 +424,7 @@ Pamana's NFC is the **claim touchpoint** from doc §4.4 — a card the heir **ta
 ### What we store on the card
 A single **URL (URI) NDEF record** = a claim deep-link:
 ```
-https://pamana-sigma.vercel.app/claim?owner=G...OWNER_ADDRESS
+https://bequest.online/claim?owner=G...OWNER_ADDRESS
 ```
 Heir taps → phone opens Chrome to the claim page, pre-filled with the owner → connect wallet → Claim. (We also read a plain **Text** record containing a `G...` address, as a fallback.)
 
